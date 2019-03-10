@@ -7,7 +7,7 @@
       "root": "",
       "sourceRoot": "src",
       "projectType": "application",
-      "prefix": "app",
+      "prefix": "tg",
       "schematics": {
         "@schematics/angular:component": {
           "style": "sass"

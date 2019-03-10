@@ -1,0 +1,24 @@
+$padding: 20px;
+
+.overview-graph {
+  &__container {
+    display: block;
+    width: calc(100% - 2 * #{$padding});
+    height: 30px;
+    padding: $padding;
+    overflow: hidden;
+    position: relative;
+
+    border: 1px solid aqua;
+  }
+
+  &__range {
+    display: block;
+    position: absolute;
+    width: calc(100% - 2 * #{$padding});
+    height: calc(100% - #{$padding});
+    top: $padding / 2;
+    left: $padding;
+  }
+}
+

@@ -1,0 +1,51 @@
+$pointer-width: 5px;
+$infinite-length: 10000px;
+
+.range {
+  &__container {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+
+    border: 1px solid rosybrown;
+  }
+
+  &__pointer {
+    display: block;
+    width: $pointer-width;
+    height: 100%;
+    position: absolute;
+
+    background-color: darkgrey;
+
+    &_left {
+      left: 100px;
+      &:before {
+        content: '';
+        display: block;
+        position: absolute;
+        right: $pointer-width;
+        width: $infinite-length;
+        height: 100%;
+
+        background-color: rgba(darkgrey, 0.5);
+      }
+    }
+
+    &_right {
+      left: 250px;
+      &:after {
+        content: '';
+        display: block;
+        position: absolute;
+        left: $pointer-width;
+        width: $infinite-length;
+        height: 100%;
+
+        background-color: rgba(darkgrey, 0.5);
+      }
+    }
+  }
+}
