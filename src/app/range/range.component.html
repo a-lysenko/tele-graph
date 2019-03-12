@@ -1,4 +1,9 @@
-<section class="range__container">
-  <div class="range__pointer range__pointer_left"></div>
-  <div class="range__pointer range__pointer_right"></div>
+<section class="range__container"
+         #container>
+  <div class="range__pointer range__pointer_left"
+       [ngStyle]="{'left.px': minPosition}"
+       #leftPointer></div>
+  <div class="range__pointer range__pointer_right"
+       [ngStyle]="{'left.px': maxPosition}"
+       #rightPointer></div>
 </section>
