@@ -4,7 +4,6 @@ import { NgModule } from '@angular/core';
 import { AppComponent } from './app.component';
 import { DataGraphComponent } from './data-graph/data-graph.component';
 import { OverviewGraphComponent } from './overview-graph/overview-graph.component';
-import { RangeComponent } from './range/range.component';
 import {SharedModule} from './_shared/shared.module';
 
 @NgModule({
@@ -12,7 +11,6 @@ import {SharedModule} from './_shared/shared.module';
     AppComponent,
     DataGraphComponent,
     OverviewGraphComponent,
-    RangeComponent
   ],
   imports: [
     BrowserModule,
