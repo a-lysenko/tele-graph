@@ -1,0 +1,36 @@
+.tg-label {
+  display: inline-flex;
+  border: 1px solid grey;
+  border-radius: 14px;
+  padding: 5px 10px 5px 5px;
+  justify-content: flex-start;
+  align-items: center;
+
+  & input {
+    display: none;
+  }
+}
+
+.tg-view-checkbox {
+  display: block;
+  padding: 0;
+  margin: 0;
+  width: 14px;
+  height: 14px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: transparent;
+  background-color: transparent;
+  border-radius: 50%;
+  transition: background-color 0.35s linear;
+}
+
+input[type=checkbox]:not(:checked) + .tg-view-checkbox {
+  background-color: transparent !important;
+}
+
+.tg-text {
+  margin-left: 5px;
+  font-size: 14px;
+  line-height: 15px;
+}

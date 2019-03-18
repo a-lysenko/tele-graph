@@ -1,0 +1,13 @@
+<label class="tg-label">
+  <input type="checkbox" #checkbox
+         checked="checked"
+         (change)="onChange(checkbox)">
+  <div class="tg-view-checkbox"
+       [ngStyle]="{'border-color': color, 'background-color': color}">
+    <svg width="14px" height="14px">
+      <path stroke="white" stroke-width="2" fill="none"
+            d="M 3 6 L 6 10 12 3"></path>
+    </svg>
+  </div>
+  <span class="tg-text">{{label}}</span>
+</label>

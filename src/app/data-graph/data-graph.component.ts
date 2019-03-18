@@ -1,4 +1,4 @@
-import {Component, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, OnInit} from '@angular/core';
 // @ts-ignore
 import jDataSrc from '../../assets/1_4911446315889590343.json';
 import {DataItem, GraphData} from '../app.types';
@@ -7,7 +7,8 @@ import {flatColumns} from '../_utils/data-transform.util';
 @Component({
   selector: 'tg-data-graph',
   templateUrl: './data-graph.component.html',
-  styleUrls: ['./data-graph.component.scss']
+  styleUrls: ['./data-graph.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DataGraphComponent implements OnInit {
 
