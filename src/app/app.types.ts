@@ -45,3 +45,8 @@ export interface LineTypedData {
     [key in DataRef]: LineData[]
   };
 }
+
+export interface RangeData {
+  minValue: number;
+  maxValue: number;
+}
