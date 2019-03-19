@@ -12,16 +12,18 @@ interface GraphServiceModel {
   data: GraphData;
 }
 
+type PartialGraphServiceModel = Partial<GraphServiceModel>;
+
 @Injectable({
   providedIn: 'root'
 })
 export class GraphService {
 
-  protected action$ = new BehaviorSubject<Partial<GraphServiceModel>>(null);
+  /*protected*/ action$ = new BehaviorSubject<PartialGraphServiceModel | Observable<PartialGraphServiceModel>>(null);
   protected dataModel$: Observable<GraphServiceModel>;
 
   constructor(
-    /*reducer: (state: GraphServiceModel, action: Partial<GraphServiceModel>) => GraphServiceModel*/
+    /*reducer: (state: GraphServiceModel, action: PartialGraphServiceModel) => GraphServiceModel*/
     /*, initialState: GraphServiceModel*/
   ) {
     const data: DataItem = jDataSrc[0];
@@ -35,7 +37,7 @@ export class GraphService {
       data: flatData
     };
 
-    const reducer = (state: GraphServiceModel, change: Partial<GraphServiceModel>): GraphServiceModel => {
+    const reducer = (state: GraphServiceModel, change: PartialGraphServiceModel): GraphServiceModel => {
       return {
         ...state,
         ...change

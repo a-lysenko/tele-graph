@@ -2,7 +2,7 @@ import {AfterViewInit, Directive, ElementRef, Input, OnInit, Renderer2} from '@a
 import {DataRef, GraphData, RangeData} from '../../../app.types';
 import {combine} from '../../../_utils/data-transform.util';
 import {GraphService} from '../../../services/graph.service';
-import {skip, take} from 'rxjs/operators';
+import {filter, skip, take} from 'rxjs/operators';
 
 interface ViewPort {
   x: number;
@@ -17,8 +17,11 @@ interface ViewPort {
 export class LineGraphDirective implements OnInit, AfterViewInit {
 
   @Input('tgLineGraph') data: GraphData;
+  @Input() useRange = true;
 
-  private initRange: RangeData = null;
+  private initRange: RangeData = {
+    minValue: 0, maxValue: 100
+  };
 
   constructor(
     private elem: ElementRef<SVGElement>,
@@ -29,9 +32,12 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.graphService.getDataModel()
-      .pipe(take(1))
+      .pipe(
+        take(1),
+        filter(() => this.useRange)
+      )
       .subscribe((val) => {
-        console.log('val', val);
+        console.log('val', val, 'this.useRange', this.useRange);
         this.initRange = {...val.range};
       });
   }
@@ -136,12 +142,15 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
       )
       .subscribe(({range}) => {
         timeStart = performance.now();
-        console.log('########### START');
-        requestAnimationFrame(animate);
+
+        if (this.useRange) {
+          console.log('########### START, range', range);
+          requestAnimationFrame(animate);
+        }
       });
   }
 
-  private getWH(elem: SVGElement) {
+  private getWH(elem: Element) {
     return elem.getBoundingClientRect();
   }
 
@@ -206,3 +215,35 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     }
   }
 }
+
+/*let requestId: number;
+
+function animate(
+  {from, to}: { from: ValuesChange, to: ValuesChange },
+  durationMs: number) {
+  const timeStart = performance.now();
+
+  const direction: -1 | 1 = (to.maxValue < from.maxValue) ? -1 : 1;
+  let prevValue: number;
+
+  function drawAction(time) {
+    const diffTime = time - timeStart;
+
+    // ...
+
+    if (
+      (direction === 1 && x2Value > to.maxValue)
+      || (direction === -1 && x2Value < to.maxValue)
+    ) {
+      requestId = null;
+      return;
+    }
+
+    // ...
+  }
+
+  requestId = requestAnimationFrame(drawAction);
+}
+
+requestId = requestAnimationFrame(drawAction);
+}*/
