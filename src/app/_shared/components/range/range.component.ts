@@ -1,23 +1,35 @@
-import {AfterViewInit, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild} from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  Renderer2,
+  ViewChild
+} from '@angular/core';
 import {fromEvent, merge} from 'rxjs';
-import {distinctUntilChanged, map, switchMap, takeUntil, tap} from 'rxjs/operators';
-
-interface ValuesChange {
-  minValue: number;
-  maxValue: number;
-}
+import {distinctUntilChanged, map, pairwise, startWith, switchMap, takeUntil, tap, throttleTime} from 'rxjs/operators';
+import {GraphService} from '../../../services/graph.service';
+import {async} from 'rxjs/internal/scheduler/async';
+import {RangeData} from '../../../app.types';
 
 @Component({
   selector: 'tg-range',
   templateUrl: './range.component.html',
-  styleUrls: ['./range.component.scss']
+  styleUrls: ['./range.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RangeComponent implements OnInit, AfterViewInit {
 
   private readonly minIntervalPx = 20;
 
-  @Input() minVal = 25;
-  @Input() maxVal = 75;
+  @Input() minValue = 25;
+  @Input() maxValue = 50;
+  @Input() throttlePause = 200;
 
   @ViewChild('leftPointer') leftPointer: ElementRef<HTMLDivElement>;
   @ViewChild('rightPointer') rightPointer: ElementRef<HTMLDivElement>;
@@ -26,15 +38,39 @@ export class RangeComponent implements OnInit, AfterViewInit {
   minPosition = 0;
   maxPosition = 0;
 
-  @Output() valuesChange = new EventEmitter<ValuesChange>();
+  @Output() valuesChange = new EventEmitter<RangeData>();
 
-  constructor(private cRef: ChangeDetectorRef) {
+  constructor(
+    private cRef: ChangeDetectorRef,
+    private renderer: Renderer2,
+    private graphService: GraphService
+  ) {
   }
 
   ngOnInit() {
+
+    this.graphService.action$.next(
+      this.valuesChange
+        .pipe(
+          throttleTime(this.throttlePause, async, {trailing: true}),
+          startWith({
+            minValue: this.minValue,
+            maxValue: this.maxValue
+          }),
+          pairwise(),
+          tap(([from, to]) => {
+            console.log('from', from, 'to', to);
+          }),
+          map(([, to]) => {
+            return {range: to};
+          })
+        )
+    );
   }
 
   ngAfterViewInit(): void {
+    // console.log('### ngAfterViewInit this.minValue', this.minValue, 'this.maxValue', this.maxValue);
+
     const containerRect = this.container.nativeElement.getBoundingClientRect();
     const leftPointerRect = this.leftPointer.nativeElement.getBoundingClientRect();
     const rightPointerRect = this.rightPointer.nativeElement.getBoundingClientRect();
@@ -94,14 +130,15 @@ export class RangeComponent implements OnInit, AfterViewInit {
         })
       )
       .subscribe(({minValue, maxValue}) => {
-        console.log('minValue', minValue, 'maxValue', maxValue);
+        this.cRef.markForCheck();
+        // console.log('minValue', minValue, 'maxValue', maxValue, 'this.maxPosition', this.maxPosition);
         this.valuesChange.emit({minValue, maxValue});
       });
   }
 
   private calcPointerPositions(availableContainerWidth) {
-    this.minPosition = this.minVal ? availableContainerWidth / 100 * this.minVal : 0;
-    this.maxPosition = this.maxVal ? availableContainerWidth / 100 * this.maxVal : availableContainerWidth;
+    this.minPosition = this.minValue ? availableContainerWidth / 100 * this.minValue : 0;
+    this.maxPosition = this.maxValue ? availableContainerWidth / 100 * this.maxValue : availableContainerWidth;
   }
 
 }

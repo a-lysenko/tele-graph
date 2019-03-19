@@ -1,5 +1,8 @@
 <section class="overview-graph__container">
-  <svg [tgLineGraph]="flatData"></svg>
+  <section class="overview-graph__graph">
+    <svg [tgLineGraph]="flatData"
+         [useRange]="false"></svg>
+  </section>
 
   <section class="overview-graph__range">
     <tg-range></tg-range>
