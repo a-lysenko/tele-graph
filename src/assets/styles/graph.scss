@@ -1,3 +1,12 @@
-//.animated-group {
-//  transition: all 0.3s ease;
-//}
+.app-section {
+  margin-top: 20px;
+}
+
+.line-group {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+
+  &#{&}__active {
+    opacity: 1;
+  }
+}

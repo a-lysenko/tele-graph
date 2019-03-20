@@ -21,8 +21,16 @@ export const flatColumns = (columns: Column[], types: RefType): FlatColumns => {
 export const prepareGraphData = (src: DataItem): GraphData => {
   return {
     colors: {...src.colors},
+    names: {...src.names},
     ...flatColumns(src.columns, src.types)
   };
+};
+
+export const keyValObj = <T, K extends keyof T>(obj: T) => {
+  return Object.keys(obj)
+    .map((key) => {
+      return {key, value: obj[key]} as { key: K, value: T[K] };
+    });
 };
 
 export const combine = <T, U>(arr1: T[], arr2: U[]) => {

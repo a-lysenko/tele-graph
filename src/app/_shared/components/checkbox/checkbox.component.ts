@@ -10,8 +10,8 @@ export class CheckboxComponent implements OnInit {
 
   @Input() checked: false;
   @Input() color: 'grey';
-  @Input() label: string;
-  @Input() name: string;
+  @Input() label = '';
+  @Input() ref = 'unnamed';
 
   @Output() changeValue = new EventEmitter<{ [key: string]: boolean }>();
 
@@ -22,7 +22,7 @@ export class CheckboxComponent implements OnInit {
   }
 
   onChange(elem: HTMLInputElement) {
-    this.changeValue.emit({[this.name || this.label || 'unnamed']: elem.checked});
+    this.changeValue.emit({[this.ref || this.label]: elem.checked});
   }
 
 }

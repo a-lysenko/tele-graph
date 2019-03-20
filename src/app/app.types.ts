@@ -37,6 +37,7 @@ export interface FlatColumns {
 
 export interface GraphData extends FlatColumns {
   colors: ColorType;
+  names: NameType;
 }
 
 export interface LineData {

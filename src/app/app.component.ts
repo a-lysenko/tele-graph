@@ -7,9 +7,5 @@ import {ChangeDetectionStrategy, Component} from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent {
-  title = 'tele-graph';
-
-  sayElemChange(val: {[key: string]: boolean}) {
-    console.log('sayElemChange val', val);
-  }
+  title = 'Tele-Graph';
 }

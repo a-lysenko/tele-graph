@@ -33,4 +33,5 @@ input[type=checkbox]:not(:checked) + .tg-view-checkbox {
   margin-left: 5px;
   font-size: 14px;
   line-height: 15px;
+  user-select: none;
 }

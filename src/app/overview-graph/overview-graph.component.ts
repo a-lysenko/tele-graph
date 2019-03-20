@@ -12,11 +12,11 @@ import {flatColumns, prepareGraphData} from '../_utils/data-transform.util';
 })
 export class OverviewGraphComponent implements OnInit {
 
-  data: DataItem = jDataSrc[0];
-  flatData: GraphData;
+  // data: DataItem = jDataSrc[0];
+  // flatData: GraphData;
 
   constructor() {
-    this.flatData = prepareGraphData(this.data);
+    // this.flatData = prepareGraphData(this.data);
   }
 
   ngOnInit() {

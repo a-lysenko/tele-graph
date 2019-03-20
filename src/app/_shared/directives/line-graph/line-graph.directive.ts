@@ -1,8 +1,8 @@
 import {AfterViewInit, Directive, ElementRef, Input, OnInit, Renderer2} from '@angular/core';
 import {DataRef, GraphData, LinesData, RangeData} from '../../../app.types';
 import {combine} from '../../../_utils/data-transform.util';
-import {GraphService} from '../../../services/graph.service';
-import {filter, skip, take} from 'rxjs/operators';
+import {GraphService, GraphServiceModel} from '../../../services/graph.service';
+import {filter, scan, skip, take, tap} from 'rxjs/operators';
 import {animationTimeMs} from '../../../app.constants';
 
 interface ViewPort {
@@ -10,6 +10,10 @@ interface ViewPort {
   y: number;
   width: number;
   height: number;
+}
+
+interface LineGraphModel extends GraphServiceModel {
+  activeLinesChanged?: boolean;
 }
 
 @Directive({
@@ -69,35 +73,64 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     const dataX = this.data.x.map((_: never, index) => index * stepX);
 
     const lineGroupsData: {
-      [key in DataRef]: SVGGElement[]
+      [key in DataRef]: SVGGElement
     } = lineRefs.reduce((acc, lineRef) => {
       const dataY = this.data.lines[lineRef].map((val) => containerHeight - val * scaleY);
       const lineData = combine(dataX, dataY);
 
-      return this.drawLine(
+      const lineGContainer = this.drawLine(
         lineData,
         svgElem,
         this.data.colors[lineRef]
       );
+
+      return {
+        ...acc,
+        [lineRef]: lineGContainer
+      };
     }, {});
 
     this.graphService.getDataModel()
       .pipe(
         skip(1),
+        scan<LineGraphModel>((acc, currentModel) => {
+          return {
+            ...currentModel,
+            activeLinesChanged: !acc.activeLines
+              || acc.activeLines.length !== currentModel.activeLines.length
+          };
+        }, {activeLines: null} as GraphServiceModel),
+        tap(({activeLines, activeLinesChanged}) => {
+          if (!activeLinesChanged) {
+            return;
+          }
+
+          Object.keys(lineGroupsData)
+            .forEach((lineRef) => {
+              lineGroupsData[lineRef].classList.toggle(
+                'line-group__active',
+                activeLines.indexOf(lineRef) !== -1
+              );
+            });
+        })
       )
-      .subscribe(({range}) => {
-        if (this.useRange) {
+      .subscribe(({range, activeLines, activeLinesChanged}) => {
+        if (this.useRange || activeLinesChanged) {
           const endViewPort = this.getViewPort(
             containerHeight,
-            range,
+            (this.useRange) ? range : this.initRange,
             this.data,
             stepX,
-            scaleY)
-          ;
-          const animateAction = this.getAnimateAction(svgElem, endViewPort);
+            scaleY,
+            activeLines
+          );
 
-          // console.log('########### START, range', range);
-          requestAnimationFrame(animateAction);
+          if (activeLines.length) {
+            const animateAction = this.getAnimateAction(svgElem, endViewPort);
+
+            // console.log('########### START, range', range);
+            requestAnimationFrame(animateAction);
+          }
         }
       });
   }
@@ -123,7 +156,8 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
 
   private drawLine(line: [number, number][], node: SVGElement, color: string) {
     const g: SVGGElement = this.renderer.createElement('g', 'svg');
-    this.renderer.addClass(g, 'animated-group');
+    this.renderer.addClass(g, 'line-group');
+    this.renderer.addClass(g, 'line-group__active');
 
     const path: SVGPathElement = this.renderer.createElement('path', 'svg');
 
@@ -147,9 +181,9 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     return g;
   }
 
-  private getMaxLinesValue(lines: LinesData, minInd: number, maxInd?: number): number {
+  private getMaxLinesValue(lines: LinesData, minInd: number, maxInd?: number, activeLines: DataRef[] = null): number {
     const indexTo = maxInd ? maxInd + 1 : undefined; // undefined is to grad array to the end
-    return Object.keys(lines)
+    return (activeLines || Object.keys(lines))
       .reduce((acc, lineRef) => {
         return Math.max(
           acc,
@@ -163,15 +197,16 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     range: RangeData,
     data: GraphData,
     stepX: number,
-    stepY: number
+    stepY: number,
+    activeLines: DataRef[] = null
   ): ViewPort {
-    const minXInd = Math.ceil(data.x.length * range.minValue / 100);
-    const maxXInd = Math.floor(data.x.length * range.maxValue / 100);
+    const minXInd = Math.ceil((data.x.length - 1) * range.minValue / 100);
+    const maxXInd = Math.floor((data.x.length - 1) * range.maxValue / 100);
 
     const minX = minXInd * stepX;
     const maxX = maxXInd * stepX;
 
-    const maxLinesVisibleValue = this.getMaxLinesValue(data.lines, minXInd, maxXInd);
+    const maxLinesVisibleValue = this.getMaxLinesValue(data.lines, minXInd, maxXInd, activeLines);
     const viewHeight = maxLinesVisibleValue * stepY;
 
     return {

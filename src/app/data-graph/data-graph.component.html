@@ -1,3 +1,28 @@
-<section class="data-graph-container">
-  <svg [tgLineGraph]="flatData"></svg>
+<section>
+  <section class="app-section data-graph-container">
+    <svg [tgLineGraph]="graphData"></svg>
+  </section>
+
+  <section class="app-section overview-graph__container">
+    <section class="overview-graph__graph">
+      <svg [tgLineGraph]="graphData"
+           [useRange]="false"></svg>
+    </section>
+
+    <section class="overview-graph__range">
+      <tg-range></tg-range>
+    </section>
+  </section>
+
+  <section class="app-section checkbox-list">
+    <section class="checkbox-container"
+             *ngFor="let lineRef of lineRefs; trackBy: trackByFn">
+      <tg-checkbox [color]="graphData.colors[lineRef]"
+                   [ref]="lineRef"
+                   [label]="graphData.names[lineRef]"
+                   [checked]="linesActivity[lineRef]"
+                   (changeValue)="handleActivityChange($event)"></tg-checkbox>
+    </section>
+  </section>
+
 </section>

@@ -1,14 +1,15 @@
 import {Injectable} from '@angular/core';
 import {AppComponent} from '../app.component';
 import {BehaviorSubject, Observable, of} from 'rxjs';
-import {DataItem, GraphData, RangeData} from '../app.types';
+import {DataItem, DataRef, GraphData, RangeData} from '../app.types';
 // @ts-ignore
 import jDataSrc from '../../assets/1_4911446315889590343.json';
 import {flatColumns} from '../_utils/data-transform.util';
 import {mergeMap, scan, shareReplay} from 'rxjs/operators';
 
-interface GraphServiceModel {
+export interface GraphServiceModel {
   range: RangeData;
+  activeLines: DataRef[];
 }
 
 type PartialGraphServiceModel = Partial<GraphServiceModel>;
@@ -29,7 +30,8 @@ export class GraphService {
       range: {
         minValue: 10,
         maxValue: 90,
-      }
+      },
+      activeLines: []
     };
 
     const reducer = (state: GraphServiceModel, change: PartialGraphServiceModel): GraphServiceModel => {
