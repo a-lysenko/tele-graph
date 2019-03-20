@@ -1,4 +1,4 @@
-import {GraphData, LineTypedData} from '../app.types';
+import {FlatColumns, LineTypedData} from '../app.types';
 
 const srcData = {
   x: [1, 3, 7],
@@ -18,7 +18,7 @@ const srcData = {
     }
   }
 */
-export const getLineTypeData = (src: GraphData): LineTypedData => {
+export const getLineTypeData = (src: FlatColumns): LineTypedData => {
   const linesKeys = Object.keys(src.lines);
   const initLines = linesKeys.reduce((acc, lineKey) => {
     return {

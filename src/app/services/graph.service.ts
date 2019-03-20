@@ -9,7 +9,6 @@ import {mergeMap, scan, shareReplay} from 'rxjs/operators';
 
 interface GraphServiceModel {
   range: RangeData;
-  data: GraphData;
 }
 
 type PartialGraphServiceModel = Partial<GraphServiceModel>;
@@ -26,15 +25,11 @@ export class GraphService {
     /*reducer: (state: GraphServiceModel, action: PartialGraphServiceModel) => GraphServiceModel*/
     /*, initialState: GraphServiceModel*/
   ) {
-    const data: DataItem = jDataSrc[0];
-    const flatData = flatColumns(data.columns, data.types);
-
     const initState: GraphServiceModel = {
       range: {
-        minValue: 5,
-        maxValue: 95,
-      },
-      data: flatData
+        minValue: 10,
+        maxValue: 90,
+      }
     };
 
     const reducer = (state: GraphServiceModel, change: PartialGraphServiceModel): GraphServiceModel => {

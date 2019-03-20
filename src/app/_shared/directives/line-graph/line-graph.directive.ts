@@ -1,8 +1,9 @@
 import {AfterViewInit, Directive, ElementRef, Input, OnInit, Renderer2} from '@angular/core';
-import {DataRef, GraphData, RangeData} from '../../../app.types';
+import {DataRef, GraphData, LinesData, RangeData} from '../../../app.types';
 import {combine} from '../../../_utils/data-transform.util';
 import {GraphService} from '../../../services/graph.service';
 import {filter, skip, take} from 'rxjs/operators';
+import {animationTimeMs} from '../../../app.constants';
 
 interface ViewPort {
   x: number;
@@ -22,6 +23,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
   private initRange: RangeData = {
     minValue: 0, maxValue: 100
   };
+  private initViewPort: ViewPort = null;
 
   constructor(
     private elem: ElementRef<SVGElement>,
@@ -36,9 +38,8 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
         take(1),
         filter(() => this.useRange)
       )
-      .subscribe((val) => {
-        console.log('val', val, 'this.useRange', this.useRange);
-        this.initRange = {...val.range};
+      .subscribe(({range}) => {
+        this.initRange = {...range};
       });
   }
 
@@ -46,115 +47,81 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     const svgElem = this.elem.nativeElement;
     const containerRect = svgElem.parentElement.getBoundingClientRect();
 
-    let initViewPort = {
-      x: 0,
-      y: 0,
-      width: containerRect.width,
-      height: containerRect.height
-    };
+    const containerHeight = containerRect.height;
+    const containerWidth = containerRect.width;
 
-    this.renderer.setStyle(svgElem, 'width', `${containerRect.width}px`);
-    this.renderer.setStyle(svgElem, 'height', `${containerRect.height}px`);
+    this.setupElement(svgElem, containerWidth, containerHeight);
 
-    this.renderer.setAttribute(
-      svgElem,
-      'viewBox',
-      `${initViewPort.x} ${initViewPort.y} ${initViewPort.width} ${initViewPort.height}`
-    );
-    this.renderer.setAttribute(
-      svgElem,
-      'preserveAspectRatio',
-      'none'
+    const stepX = containerWidth / (this.data.x.length - 1);
+    const scaleY = containerHeight / this.getMaxLinesValue(this.data.lines, 0);
+
+    this.initViewPort = this.getViewPort(
+      containerHeight,
+      this.initRange,
+      this.data,
+      stepX,
+      scaleY
     );
 
-    const mockDataRefs: DataRef[] = ['y0'];
+    this.setViewBox(svgElem, this.initViewPort);
 
-    const stepX = containerRect.width / (this.data.x.length - 1);
+    const lineRefs: DataRef[] = Object.keys(this.data.lines);
     const dataX = this.data.x.map((_: never, index) => index * stepX);
 
-    const scaleY = containerRect.height / Math.max(...this.data.lines[mockDataRefs[0]]);
-    const dataY = this.data.lines[mockDataRefs[0]].map((val) => containerRect.height - val * scaleY);
+    const lineGroupsData: {
+      [key in DataRef]: SVGGElement[]
+    } = lineRefs.reduce((acc, lineRef) => {
+      const dataY = this.data.lines[lineRef].map((val) => containerHeight - val * scaleY);
+      const lineData = combine(dataX, dataY);
 
-    const line0Data = combine(dataX, dataY);
-
-    const gContainer = this.drawLine(
-      line0Data,
-      svgElem
-    );
-
-    const endViewPort = {
-      x: 0,
-      y: -containerRect.height / 4,
-      width: containerRect.width,
-      height: containerRect.height * 1.25
-    };
-
-    let prevViewPort = {
-      ...initViewPort
-    };
-
-    const durationMs = 200;
-
-    let timeStart = performance.now();
-
-    const viewPortsEq = (vp1: ViewPort, vp2: ViewPort) => {
-      return vp1.x === vp2.x && vp1.y === vp2.y
-        && vp1.width === vp2.width && vp1.height === vp1.width;
-    };
-
-    function animate(time) {
-      const diffTime = time - timeStart;
-
-      const currViewPort = {...prevViewPort};
-      if (diffTime > 0) {
-        const progress = diffTime / durationMs;
-        currViewPort.x = initViewPort.x + (endViewPort.x - initViewPort.x) * progress;
-        currViewPort.y = initViewPort.y + (endViewPort.y - initViewPort.y) * progress;
-        currViewPort.width = initViewPort.width + (endViewPort.width - initViewPort.width) * progress;
-        currViewPort.height = initViewPort.height + (endViewPort.height - initViewPort.height) * progress;
-      }
-
-      if (!viewPortsEq(currViewPort, prevViewPort)) {
-        prevViewPort = {...currViewPort};
-
-        // console.log('### currViewPort', currViewPort, 'diffTime', diffTime);
-
-        if (
-          time > (timeStart + durationMs)
-        ) {
-          console.log('####### STOP');
-          initViewPort = {...currViewPort};
-          return;
-        }
-
-        svgElem.setAttribute(
-          'viewBox',
-          `${currViewPort.x} ${currViewPort.y} ${currViewPort.width} ${currViewPort.height}`
-        );
-      }
-
-      requestAnimationFrame(animate);
-    }
+      return this.drawLine(
+        lineData,
+        svgElem,
+        this.data.colors[lineRef]
+      );
+    }, {});
 
     this.graphService.getDataModel()
       .pipe(
         skip(1),
       )
       .subscribe(({range}) => {
-        timeStart = performance.now();
-
         if (this.useRange) {
-          console.log('########### START, range', range);
-          requestAnimationFrame(animate);
+          const endViewPort = this.getViewPort(
+            containerHeight,
+            range,
+            this.data,
+            stepX,
+            scaleY)
+          ;
+          const animateAction = this.getAnimateAction(svgElem, endViewPort);
+
+          // console.log('########### START, range', range);
+          requestAnimationFrame(animateAction);
         }
       });
   }
 
-  private getWH(elem: Element) {
-    return elem.getBoundingClientRect();
+  private setViewBox(svgElem: SVGElement, initViewPort: ViewPort) {
+    this.renderer.setAttribute(
+      svgElem,
+      'viewBox',
+      `${initViewPort.x} ${initViewPort.y} ${initViewPort.width} ${initViewPort.height}`
+    );
   }
 
-  private drawLine(line: [number, number][], node: SVGElement) {
+  private setupElement(svgElem: SVGElement, containerWidth: number, containerHeight: number) {
+    this.renderer.setStyle(svgElem, 'width', `${containerWidth}px`);
+    this.renderer.setStyle(svgElem, 'height', `${containerHeight}px`);
+
+    this.renderer.setAttribute(
+      svgElem,
+      'preserveAspectRatio',
+      'none'
+    );
+  }
+
+  private drawLine(line: [number, number][], node: SVGElement, color: string) {
     const g: SVGGElement = this.renderer.createElement('g', 'svg');
     this.renderer.addClass(g, 'animated-group');
 
@@ -169,7 +136,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     }, '');
 
     this.renderer.setAttribute(path, 'd', pathD);
-    this.renderer.setAttribute(path, 'stroke', 'coral');
+    this.renderer.setAttribute(path, 'stroke', color);
     this.renderer.setAttribute(path, 'stroke-width', '2');
     this.renderer.setAttribute(path, 'vector-effect', 'non-scaling-stroke');
     this.renderer.setAttribute(path, 'fill', 'none');
@@ -180,70 +147,84 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     return g;
   }
 
-  private setTransform(node: SVGGraphicsElement, [operator, value]: [string, string], keepPrev = false) {
-    console.log('setTransform value to set', value);
+  private getMaxLinesValue(lines: LinesData, minInd: number, maxInd?: number): number {
+    const indexTo = maxInd ? maxInd + 1 : undefined; // undefined is to grad array to the end
+    return Object.keys(lines)
+      .reduce((acc, lineRef) => {
+        return Math.max(
+          acc,
+          ...lines[lineRef].slice(minInd, indexTo)
+        );
+      }, 0);
+  }
 
-    const usedTOperatorsAttr = node.getAttribute('used-t-operators') || '';
-    const usedTOperators = usedTOperatorsAttr.split(';');
+  private getViewPort(
+    containerHeight: number,
+    range: RangeData,
+    data: GraphData,
+    stepX: number,
+    stepY: number
+  ): ViewPort {
+    const minXInd = Math.ceil(data.x.length * range.minValue / 100);
+    const maxXInd = Math.floor(data.x.length * range.maxValue / 100);
 
-    if (!keepPrev) {
-      usedTOperators.filter((usedTOperator) => usedTOperator !== operator)
-        .forEach((usedOperator) => {
-          node.setAttribute(`used-t-${operator.toLowerCase()}`, null);
-        });
+    const minX = minXInd * stepX;
+    const maxX = maxXInd * stepX;
 
-      node.setAttribute('used-t-operators', operator);
-      node.setAttribute(`used-t-${operator.toLowerCase()}`, value);
+    const maxLinesVisibleValue = this.getMaxLinesValue(data.lines, minXInd, maxXInd);
+    const viewHeight = maxLinesVisibleValue * stepY;
 
-      node.style.transform = `${operator}(${value})`;
-    } else {
-      if (usedTOperators.indexOf(operator) === -1) {
-        usedTOperators.push(operator);
+    return {
+      x: minX,
+      y: containerHeight - viewHeight,
+      width: maxX - minX,
+      height: viewHeight
+    };
+  }
+
+  private getAnimateAction(svgElem: SVGElement, endViewPort: ViewPort) {
+    const startViewPort = {...this.initViewPort};
+    const durationMs = animationTimeMs;
+    const timeStart = performance.now();
+
+    const viewPortsEq = (vp1: ViewPort, vp2: ViewPort) => {
+      return vp1.x === vp2.x && vp1.y === vp2.y
+        && vp1.width === vp2.width && vp1.height === vp1.width;
+    };
+    const ctx = this;
+
+    let prevViewPort = {...startViewPort};
+
+    return function animate(time: number) {
+      const diffTime = time - timeStart;
+
+      const currViewPort = {...prevViewPort};
+      if (diffTime > 0) {
+        const progress = diffTime / durationMs;
+        currViewPort.x = startViewPort.x + (endViewPort.x - startViewPort.x) * progress;
+        currViewPort.y = startViewPort.y + (endViewPort.y - startViewPort.y) * progress;
+        currViewPort.width = startViewPort.width + (endViewPort.width - startViewPort.width) * progress;
+        currViewPort.height = startViewPort.height + (endViewPort.height - startViewPort.height) * progress;
       }
 
-      node.setAttribute('used-t-operators', usedTOperators.join(';'));
-      node.setAttribute(`used-t-${operator.toLowerCase()}`, value);
+      if (!viewPortsEq(currViewPort, prevViewPort)) {
+        prevViewPort = {...currViewPort};
 
-      const transformValue = usedTOperators.reduce((acc, usedOperator) => {
-        const usedOperatorValue = (usedOperator === operator)
-          ? value
-          : node.getAttribute(`used-t-${usedOperator.toLowerCase()}`);
-        return `${acc} ${usedOperator}(${usedOperatorValue})`;
-      }, '');
+        if (
+          time > (timeStart + durationMs)
+        ) {
+          // console.log('####### STOP');
+          ctx.initViewPort = {...currViewPort};
+          return;
+        }
 
-      node.style.transform = transformValue;
-    }
+        svgElem.setAttribute(
+          'viewBox',
+          `${currViewPort.x} ${currViewPort.y} ${currViewPort.width} ${currViewPort.height}`
+        );
+      }
+
+      requestAnimationFrame(animate);
+    };
   }
 }
-
-/*let requestId: number;
-
-function animate(
-  {from, to}: { from: ValuesChange, to: ValuesChange },
-  durationMs: number) {
-  const timeStart = performance.now();
-
-  const direction: -1 | 1 = (to.maxValue < from.maxValue) ? -1 : 1;
-  let prevValue: number;
-
-  function drawAction(time) {
-    const diffTime = time - timeStart;
-
-    // ...
-
-    if (
-      (direction === 1 && x2Value > to.maxValue)
-      || (direction === -1 && x2Value < to.maxValue)
-    ) {
-      requestId = null;
-      return;
-    }
-
-    // ...
-  }
-
-  requestId = requestAnimationFrame(drawAction);
-}
-
-requestId = requestAnimationFrame(drawAction);
-}*/

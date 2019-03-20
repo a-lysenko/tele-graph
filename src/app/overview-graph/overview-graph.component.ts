@@ -2,7 +2,7 @@ import {ChangeDetectionStrategy, Component, OnInit} from '@angular/core';
 import {DataItem, GraphData} from '../app.types';
 // @ts-ignore
 import jDataSrc from '../../assets/1_4911446315889590343.json';
-import {flatColumns} from '../_utils/data-transform.util';
+import {flatColumns, prepareGraphData} from '../_utils/data-transform.util';
 
 @Component({
   selector: 'tg-overview-graph',
@@ -16,7 +16,7 @@ export class OverviewGraphComponent implements OnInit {
   flatData: GraphData;
 
   constructor() {
-    this.flatData = flatColumns(this.data.columns, this.data.types);
+    this.flatData = prepareGraphData(this.data);
   }
 
   ngOnInit() {

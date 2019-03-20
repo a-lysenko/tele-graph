@@ -12,10 +12,11 @@ import {
   ViewChild
 } from '@angular/core';
 import {fromEvent, merge} from 'rxjs';
-import {distinctUntilChanged, map, pairwise, startWith, switchMap, takeUntil, tap, throttleTime} from 'rxjs/operators';
+import {distinctUntilChanged, map, pairwise, startWith, switchMap, take, takeUntil, tap, throttleTime} from 'rxjs/operators';
 import {GraphService} from '../../../services/graph.service';
 import {async} from 'rxjs/internal/scheduler/async';
 import {RangeData} from '../../../app.types';
+import {animationTimeMs} from '../../../app.constants';
 
 @Component({
   selector: 'tg-range',
@@ -29,7 +30,7 @@ export class RangeComponent implements OnInit, AfterViewInit {
 
   @Input() minValue = 25;
   @Input() maxValue = 50;
-  @Input() throttlePause = 200;
+  @Input() throttlePause = animationTimeMs;
 
   @ViewChild('leftPointer') leftPointer: ElementRef<HTMLDivElement>;
   @ViewChild('rightPointer') rightPointer: ElementRef<HTMLDivElement>;
@@ -48,6 +49,14 @@ export class RangeComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
+    this.graphService.getDataModel()
+      .pipe(
+        take(1)
+      )
+      .subscribe(({range}) => {
+        this.minValue = range.minValue;
+        this.maxValue = range.maxValue;
+      });
 
     this.graphService.action$.next(
       this.valuesChange
@@ -57,11 +66,14 @@ export class RangeComponent implements OnInit, AfterViewInit {
             minValue: this.minValue,
             maxValue: this.maxValue
           }),
-          pairwise(),
+          /*pairwise(),
           tap(([from, to]) => {
             console.log('from', from, 'to', to);
           }),
           map(([, to]) => {
+            return {range: to};
+          })*/
+          map((to) => {
             return {range: to};
           })
         )
@@ -69,8 +81,6 @@ export class RangeComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // console.log('### ngAfterViewInit this.minValue', this.minValue, 'this.maxValue', this.maxValue);
-
     const containerRect = this.container.nativeElement.getBoundingClientRect();
     const leftPointerRect = this.leftPointer.nativeElement.getBoundingClientRect();
     const rightPointerRect = this.rightPointer.nativeElement.getBoundingClientRect();
@@ -131,7 +141,6 @@ export class RangeComponent implements OnInit, AfterViewInit {
       )
       .subscribe(({minValue, maxValue}) => {
         this.cRef.markForCheck();
-        // console.log('minValue', minValue, 'maxValue', maxValue, 'this.maxPosition', this.maxPosition);
         this.valuesChange.emit({minValue, maxValue});
       });
   }

@@ -26,11 +26,17 @@ export interface DataItem {
   colors: ColorType;
 }
 
-export interface GraphData {
+export type LinesData = {
+  [key in DataRef]: number[]
+};
+
+export interface FlatColumns {
   x: number[];
-  lines: {
-    [key in DataRef]: number[]
-  };
+  lines: LinesData;
+}
+
+export interface GraphData extends FlatColumns {
+  colors: ColorType;
 }
 
 export interface LineData {

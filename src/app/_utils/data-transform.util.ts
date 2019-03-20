@@ -1,6 +1,6 @@
-import {Column, DataRef, DataType, GraphData, RefType} from '../app.types';
+import {Column, DataItem, DataRef, DataType, FlatColumns, GraphData, RefType} from '../app.types';
 
-export const flatColumns = (columns: Column[], types: RefType): GraphData => {
+export const flatColumns = (columns: Column[], types: RefType): FlatColumns => {
   const xRef: DataRef = Object.keys(types).find((dataRef) => types[dataRef] === DataType.x);
   const lineRefs: DataRef[] = Object.keys(types).filter((dataRef) => types[dataRef] === DataType.line);
 
@@ -15,6 +15,13 @@ export const flatColumns = (columns: Column[], types: RefType): GraphData => {
           .slice(1) as number[]
       };
     }, {})
+  };
+};
+
+export const prepareGraphData = (src: DataItem): GraphData => {
+  return {
+    colors: {...src.colors},
+    ...flatColumns(src.columns, src.types)
   };
 };
 
