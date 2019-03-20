@@ -11,7 +11,7 @@ import {
   Renderer2,
   ViewChild
 } from '@angular/core';
-import {fromEvent, merge} from 'rxjs';
+import {combineLatest, fromEvent, merge, of} from 'rxjs';
 import {
   distinctUntilChanged,
   map,
@@ -43,6 +43,7 @@ export class RangeComponent implements OnInit, AfterViewInit {
 
   @ViewChild('leftPointer') leftPointer: ElementRef<HTMLDivElement>;
   @ViewChild('rightPointer') rightPointer: ElementRef<HTMLDivElement>;
+  @ViewChild('pointerContainer') pointerContainer: ElementRef<HTMLDivElement>;
   @ViewChild('container') container: ElementRef<HTMLElement>;
 
   minPosition = 0;
@@ -97,6 +98,7 @@ export class RangeComponent implements OnInit, AfterViewInit {
     const availableContainerWidth = containerRect.width - rightPointerRect.width;
 
     this.cRef.detach();
+    console.log('this.minValue', this.minValue, 'this.maxValue', this.maxValue);
     this.calcPointerPositions(availableContainerWidth);
     this.cRef.detectChanges();
     this.cRef.reattach();
@@ -104,7 +106,8 @@ export class RangeComponent implements OnInit, AfterViewInit {
     merge(
       fromEvent(this.leftPointer.nativeElement, 'mousedown')
         .pipe(
-          switchMap(() => {
+          switchMap((event) => {
+            event.stopImmediatePropagation();
             return fromEvent<MouseEvent>(document, 'mousemove')
               .pipe(
                 takeUntil(fromEvent(document, 'mouseup'))
@@ -113,30 +116,66 @@ export class RangeComponent implements OnInit, AfterViewInit {
           tap(({clientX}) => {
             this.minPosition = Math.min(
               Math.max(clientX - containerRect.left, 0),
-              this.maxPosition - this.minIntervalPx
+              (availableContainerWidth - this.maxPosition) - this.minIntervalPx
             );
           })
         ),
       fromEvent(this.rightPointer.nativeElement, 'mousedown')
         .pipe(
-          switchMap(() => {
+          switchMap((event) => {
+            event.stopImmediatePropagation();
             return fromEvent<MouseEvent>(document, 'mousemove')
               .pipe(
                 takeUntil(fromEvent(document, 'mouseup'))
               );
           }),
           tap(({clientX}) => {
-            this.maxPosition = Math.max(
+            this.maxPosition = availableContainerWidth - Math.max(
               Math.min(clientX - containerRect.left, availableContainerWidth),
               this.minPosition + this.minIntervalPx
             );
+          })
+        ),
+      fromEvent(this.pointerContainer.nativeElement, 'mousedown')
+        .pipe(
+          switchMap((mouseDownEvent: MouseEvent) => {
+            console.log('### mouseDownEvent', mouseDownEvent);
+            return combineLatest([
+              fromEvent<MouseEvent>(document, 'mousemove'),
+              of(mouseDownEvent.clientX)
+            ])
+              .pipe(
+                takeUntil(fromEvent(document, 'mouseup'))
+              );
+          }),
+          tap(([mouseMoveEvent, initialClientX]) => {
+            const {clientX} = mouseMoveEvent;
+            console.log('#### clientX', clientX, 'initialClientX', initialClientX);
+            const deltaX = clientX - initialClientX;
+
+            const potentialMinPos = this.minPosition + deltaX;
+            const potentialMaxPos = this.maxPosition - deltaX;
+
+            if (potentialMinPos < 0) {
+              const shift = this.minPosition;
+              this.minPosition = 0;
+              this.maxPosition = this.maxPosition + shift;
+            } else if (potentialMaxPos < 0) {
+              const shift = this.maxPosition;
+              this.minPosition = this.minPosition + shift;
+              this.maxPosition = 0;
+            } else {
+              this.minPosition = potentialMinPos;
+              this.maxPosition = potentialMaxPos;
+            }
           })
         )
     )
       .pipe(
         map(() => {
           const calculatedMinValue = this.minPosition / availableContainerWidth * 100;
-          const calculatedMaxValue = this.maxPosition / availableContainerWidth * 100;
+          const calculatedMaxValue =
+            (availableContainerWidth - this.maxPosition) / availableContainerWidth * 100;
 
           return {
             minValue: +calculatedMinValue.toFixed(2),
@@ -156,7 +195,9 @@ export class RangeComponent implements OnInit, AfterViewInit {
 
   private calcPointerPositions(availableContainerWidth) {
     this.minPosition = this.minValue ? availableContainerWidth / 100 * this.minValue : 0;
-    this.maxPosition = this.maxValue ? availableContainerWidth / 100 * this.maxValue : availableContainerWidth;
+    this.maxPosition = this.maxValue
+      ? availableContainerWidth - availableContainerWidth / 100 * this.maxValue
+      : 0;
   }
 
 }
