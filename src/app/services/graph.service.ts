@@ -1,10 +1,6 @@
 import {Injectable} from '@angular/core';
-import {AppComponent} from '../app.component';
 import {BehaviorSubject, Observable, of} from 'rxjs';
-import {DataItem, DataRef, GraphData, RangeData} from '../app.types';
-// @ts-ignore
-import jDataSrc from '../../assets/1_4911446315889590343.json';
-import {flatColumns} from '../_utils/data-transform.util';
+import {DataRef, RangeData} from '../app.types';
 import {mergeMap, scan, shareReplay} from 'rxjs/operators';
 
 export interface GraphServiceModel {
@@ -19,7 +15,8 @@ type PartialGraphServiceModel = Partial<GraphServiceModel>;
 })
 export class GraphService {
 
-  /*protected*/ action$ = new BehaviorSubject<PartialGraphServiceModel | Observable<PartialGraphServiceModel>>(null);
+  /*protected*/
+  action$ = new BehaviorSubject<PartialGraphServiceModel | Observable<PartialGraphServiceModel>>(null);
   protected dataModel$: Observable<GraphServiceModel>;
 
   constructor(

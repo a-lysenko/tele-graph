@@ -12,7 +12,16 @@ import {
   ViewChild
 } from '@angular/core';
 import {fromEvent, merge} from 'rxjs';
-import {distinctUntilChanged, map, pairwise, startWith, switchMap, take, takeUntil, tap, throttleTime} from 'rxjs/operators';
+import {
+  distinctUntilChanged,
+  map,
+  startWith,
+  switchMap,
+  take,
+  takeUntil,
+  tap,
+  throttleTime
+} from 'rxjs/operators';
 import {GraphService} from '../../../services/graph.service';
 import {async} from 'rxjs/internal/scheduler/async';
 import {RangeData} from '../../../app.types';

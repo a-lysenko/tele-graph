@@ -1,4 +1,12 @@
-import {Column, DataItem, DataRef, DataType, FlatColumns, GraphData, RefType} from '../app.types';
+import {
+  Column,
+  DataItem,
+  DataRef,
+  DataType,
+  FlatColumns,
+  GraphData,
+  RefType
+} from '../app.types';
 
 export const flatColumns = (columns: Column[], types: RefType): FlatColumns => {
   const xRef: DataRef = Object.keys(types).find((dataRef) => types[dataRef] === DataType.x);
@@ -24,13 +32,6 @@ export const prepareGraphData = (src: DataItem): GraphData => {
     names: {...src.names},
     ...flatColumns(src.columns, src.types)
   };
-};
-
-export const keyValObj = <T, K extends keyof T>(obj: T) => {
-  return Object.keys(obj)
-    .map((key) => {
-      return {key, value: obj[key]} as { key: K, value: T[K] };
-    });
 };
 
 export const combine = <T, U>(arr1: T[], arr2: U[]) => {

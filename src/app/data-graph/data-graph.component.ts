@@ -2,7 +2,7 @@ import {ChangeDetectionStrategy, Component, OnInit} from '@angular/core';
 // @ts-ignore
 import jDataSrc from '../../assets/1_4911446315889590343.json';
 import {DataItem, DataRef, GraphData} from '../app.types';
-import {keyValObj, prepareGraphData} from '../_utils/data-transform.util';
+import {prepareGraphData} from '../_utils/data-transform.util';
 import {GraphService} from '../services/graph.service';
 
 @Component({
@@ -17,7 +17,6 @@ export class DataGraphComponent implements OnInit {
   graphData: GraphData;
   linesActivity: { [key in DataRef]: boolean } = {};
   lineRefs: DataRef[] = [];
-  flatNames: { key: DataRef, value: string }[] = [];
 
   constructor(
     private graphService: GraphService
@@ -31,8 +30,6 @@ export class DataGraphComponent implements OnInit {
           [lineRef]: true
         };
       }, {});
-
-    this.flatNames = keyValObj(this.data.names);
   }
 
   ngOnInit() {

@@ -182,7 +182,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
   }
 
   private getMaxLinesValue(lines: LinesData, minInd: number, maxInd?: number, activeLines: DataRef[] = null): number {
-    const indexTo = maxInd ? maxInd + 1 : undefined; // undefined is to grad array to the end
+    const indexTo = maxInd ? maxInd + 1 : undefined; // undefined is to grab array to the end
     return (activeLines || Object.keys(lines))
       .reduce((acc, lineRef) => {
         return Math.max(
