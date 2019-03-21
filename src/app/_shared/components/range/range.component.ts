@@ -11,7 +11,7 @@ import {
   Renderer2,
   ViewChild
 } from '@angular/core';
-import {combineLatest, fromEvent, merge, of} from 'rxjs';
+import {fromEvent, merge} from 'rxjs';
 import {
   distinctUntilChanged,
   map, pairwise,
@@ -103,15 +103,18 @@ export class RangeComponent implements OnInit, AfterViewInit {
     this.cRef.detectChanges();
     this.cRef.reattach();
 
-    /*const mouseEventToCoordinate = (mouseEvent) => {
+    const mouseEventToCoordinate = (mouseEvent: MouseEvent) => {
       mouseEvent.preventDefault();
-      return mouseEvent.clientX;
+      mouseEvent.stopImmediatePropagation();
+      return {clientX: mouseEvent.clientX};
     };
 
-    const touchEventToCoordinate = (touchEvent) => {
+    const touchEventToCoordinate = (touchEvent: TouchEvent) => {
       touchEvent.preventDefault();
-      return touchEvent.changedTouches[0].clientX;
+      touchEvent.stopImmediatePropagation();
+      return {clientX: touchEvent.changedTouches[0].clientX};
     };
+    /*
 
     const mouseDowns = fromEvent(this.leftPointer.nativeElement, 'mousedown').map(mouseEventToCoordinate);
     const mouseMoves = fromEvent(window, 'mousemove').map(mouseEventToCoordinate);
@@ -121,18 +124,66 @@ export class RangeComponent implements OnInit, AfterViewInit {
     const touchMoves = fromEvent(domItem, 'touchmove').map(touchEventToCoordinate);
     const touchEnds = fromEvent(window, 'touchend').map(touchEventToCoordinate);*/
 
-    const mouseMove$ = fromEvent<MouseEvent>(document, 'mousemove');
-    const mouseUp$ = fromEvent<MouseEvent>(document, 'mouseup');
+    const mouseMove$ = fromEvent<MouseEvent>(document, 'mousemove')
+      .pipe(map(mouseEventToCoordinate));
+    const mouseUp$ = fromEvent<MouseEvent>(document, 'mouseup')
+      .pipe(map(mouseEventToCoordinate));
+    const touchMove$ = fromEvent<TouchEvent>(document, 'touchmove')
+      .pipe(map(touchEventToCoordinate));
+    const touchEnd$ = fromEvent<TouchEvent>(document, 'touchend')
+      .pipe(map(touchEventToCoordinate));
+
+    const move$ = merge(
+      mouseMove$,
+      touchMove$
+    );
+
+    const end$ = merge(
+      mouseUp$,
+      touchEnd$
+    );
+
+    const mouseStartLeft$ = fromEvent<MouseEvent>(
+      this.leftPointer.nativeElement, 'mousedown'
+    ).pipe(map(mouseEventToCoordinate));
+    const touchStartLeft$ = fromEvent<TouchEvent>(
+      this.leftPointer.nativeElement, 'touchstart'
+    ).pipe(map(touchEventToCoordinate));
+
+    const mouseStartRight$ = fromEvent<MouseEvent>(
+      this.rightPointer.nativeElement, 'mousedown'
+    ).pipe(map(mouseEventToCoordinate));
+    const touchStartRight$ = fromEvent<TouchEvent>(
+      this.rightPointer.nativeElement, 'touchstart'
+    ).pipe(map(touchEventToCoordinate));
+
+    const mouseStartSlider$ = fromEvent<MouseEvent>(
+      this.pointerContainer.nativeElement, 'mousedown'
+    ).pipe(map(mouseEventToCoordinate));
+    const touchStartSlider$ = fromEvent<TouchEvent>(
+      this.pointerContainer.nativeElement, 'touchstart'
+    ).pipe(map(touchEventToCoordinate));
+
+    const startLeft$ = merge(
+      mouseStartLeft$,
+      touchStartLeft$
+    );
+    const startRight$ = merge(
+      mouseStartRight$,
+      touchStartRight$
+    );
+    const startSlider$ = merge(
+      mouseStartSlider$,
+      touchStartSlider$
+    );
 
     merge(
-      fromEvent(this.leftPointer.nativeElement, 'mousedown')
+      startLeft$
         .pipe(
           switchMap((event) => {
-            event.stopImmediatePropagation();
-
-            return mouseMove$
+            return move$
               .pipe(
-                takeUntil(mouseUp$)
+                takeUntil(end$)
               );
           }),
           tap(({clientX}) => {
@@ -142,13 +193,12 @@ export class RangeComponent implements OnInit, AfterViewInit {
             );
           })
         ),
-      fromEvent(this.rightPointer.nativeElement, 'mousedown')
+      startRight$
         .pipe(
           switchMap((event) => {
-            event.stopImmediatePropagation();
-            return mouseMove$
+            return move$
               .pipe(
-                takeUntil(mouseUp$)
+                takeUntil(end$)
               );
           }),
           tap(({clientX}) => {
@@ -158,16 +208,15 @@ export class RangeComponent implements OnInit, AfterViewInit {
             );
           })
         ),
-      fromEvent(this.pointerContainer.nativeElement, 'mousedown')
+      startSlider$
         .pipe(
           switchMap((mouseDownEvent: MouseEvent) => {
-            console.log('### mouseDownEvent', mouseDownEvent);
-            return mouseMove$
+            return move$
               .pipe(
                 map(({clientX: mousemoveClientX}) => mousemoveClientX),
                 startWith(mouseDownEvent.clientX),
                 pairwise(),
-                takeUntil(mouseUp$)
+                takeUntil(end$)
               );
           }),
           tap(([initialClientX, mousemoveClientX]) => {
