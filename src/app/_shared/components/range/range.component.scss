@@ -14,31 +14,30 @@ $infinite-length: 10000px;
 
   &__pointer-container {
     position: absolute;
-    left: 10px;
-    right: 250px;
-    cursor: grab;
+    left: auto;
+    right: auto;
     height: 100%;
     display: flex;
     justify-content: space-between;
     background-color: transparent;
+    cursor: grab;
+    touch-action: manipulation;
   }
 
   &__pointer {
     display: block;
     width: $pointer-width;
     height: 100%;
-    //position: absolute;
     cursor: e-resize;
+    touch-action: manipulation;
 
     background-color: darkgrey;
 
     &_left {
-      //left: 100px;
       &:before {
         content: '';
         display: block;
         position: absolute;
-        //right: $pointer-width;
         right: 100%;
         width: $infinite-length;
         height: 100%;
