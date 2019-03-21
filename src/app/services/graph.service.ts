@@ -7,22 +7,15 @@ export interface GraphServiceModel {
   range: RangeData;
   activeLines: DataRef[];
 }
-
 type PartialGraphServiceModel = Partial<GraphServiceModel>;
 
-@Injectable({
-  providedIn: 'root'
-})
 export class GraphService {
 
   /*protected*/
   action$ = new BehaviorSubject<PartialGraphServiceModel | Observable<PartialGraphServiceModel>>(null);
   protected dataModel$: Observable<GraphServiceModel>;
 
-  constructor(
-    /*reducer: (state: GraphServiceModel, action: PartialGraphServiceModel) => GraphServiceModel*/
-    /*, initialState: GraphServiceModel*/
-  ) {
+  constructor() {
     const initState: GraphServiceModel = {
       range: {
         minValue: 10,

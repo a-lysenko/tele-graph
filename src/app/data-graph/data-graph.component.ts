@@ -1,6 +1,4 @@
-import {ChangeDetectionStrategy, Component, OnInit} from '@angular/core';
-// @ts-ignore
-import jDataSrc from '../../assets/1_4911446315889590343.json';
+import {ChangeDetectionStrategy, Component, Input, OnInit} from '@angular/core';
 import {DataItem, DataRef, GraphData} from '../app.types';
 import {prepareGraphData} from '../_utils/data-transform.util';
 import {GraphService} from '../services/graph.service';
@@ -9,11 +7,12 @@ import {GraphService} from '../services/graph.service';
   selector: 'tg-data-graph',
   templateUrl: './data-graph.component.html',
   styleUrls: ['./data-graph.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [GraphService]
 })
 export class DataGraphComponent implements OnInit {
 
-  data: DataItem = jDataSrc[0];
+  @Input() data: DataItem = null;
   graphData: GraphData;
   linesActivity: { [key in DataRef]: boolean } = {};
   lineRefs: DataRef[] = [];
@@ -21,6 +20,9 @@ export class DataGraphComponent implements OnInit {
   constructor(
     private graphService: GraphService
   ) {
+  }
+
+  ngOnInit() {
     this.graphData = prepareGraphData(this.data);
     this.lineRefs = Object.keys(this.data.names);
     this.linesActivity = this.lineRefs
@@ -30,9 +32,7 @@ export class DataGraphComponent implements OnInit {
           [lineRef]: true
         };
       }, {});
-  }
 
-  ngOnInit() {
     this.graphService.action$.next({
       activeLines: this.getActiveLines(
         this.lineRefs, this.linesActivity

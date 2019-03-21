@@ -35,7 +35,7 @@ import {animationTimeMs} from '../../../app.constants';
 })
 export class RangeComponent implements OnInit, AfterViewInit {
 
-  private readonly minIntervalPx = 70;
+  private readonly minIntervalPx = 100;
 
   @Input() minValue = 25;
   @Input() maxValue = 50;

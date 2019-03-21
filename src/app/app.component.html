@@ -22,4 +22,6 @@
   Welcome to {{ title }}!
 </h1>
 
-<tg-data-graph></tg-data-graph>
+<tg-data-graph
+  *ngFor="let dataItem of dataSrc; trackBy: trackByFn"
+  [data]="dataItem"></tg-data-graph>
