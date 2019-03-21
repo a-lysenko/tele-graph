@@ -14,7 +14,7 @@ import {
 import {combineLatest, fromEvent, merge, of} from 'rxjs';
 import {
   distinctUntilChanged,
-  map,
+  map, pairwise,
   startWith,
   switchMap,
   take,
@@ -140,18 +140,16 @@ export class RangeComponent implements OnInit, AfterViewInit {
         .pipe(
           switchMap((mouseDownEvent: MouseEvent) => {
             console.log('### mouseDownEvent', mouseDownEvent);
-            return combineLatest([
-              fromEvent<MouseEvent>(document, 'mousemove'),
-              of(mouseDownEvent.clientX)
-            ])
+            return fromEvent<MouseEvent>(document, 'mousemove')
               .pipe(
+                map(({clientX: mousemoveClientX}) => mousemoveClientX),
+                startWith(mouseDownEvent.clientX),
+                pairwise(),
                 takeUntil(fromEvent(document, 'mouseup'))
               );
           }),
-          tap(([mouseMoveEvent, initialClientX]) => {
-            const {clientX} = mouseMoveEvent;
-            console.log('#### clientX', clientX, 'initialClientX', initialClientX);
-            const deltaX = clientX - initialClientX;
+          tap(([initialClientX, mousemoveClientX]) => {
+            const deltaX = mousemoveClientX - initialClientX;
 
             const potentialMinPos = this.minPosition + deltaX;
             const potentialMaxPos = this.maxPosition - deltaX;
