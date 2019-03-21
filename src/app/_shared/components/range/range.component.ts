@@ -103,14 +103,36 @@ export class RangeComponent implements OnInit, AfterViewInit {
     this.cRef.detectChanges();
     this.cRef.reattach();
 
+    /*const mouseEventToCoordinate = (mouseEvent) => {
+      mouseEvent.preventDefault();
+      return mouseEvent.clientX;
+    };
+
+    const touchEventToCoordinate = (touchEvent) => {
+      touchEvent.preventDefault();
+      return touchEvent.changedTouches[0].clientX;
+    };
+
+    const mouseDowns = fromEvent(this.leftPointer.nativeElement, 'mousedown').map(mouseEventToCoordinate);
+    const mouseMoves = fromEvent(window, 'mousemove').map(mouseEventToCoordinate);
+    const mouseUps = fromEvent(window, 'mouseup').map(mouseEventToCoordinate);
+
+    const touchStarts = fromEvent(domItem, 'touchstart').map(touchEventToCoordinate);
+    const touchMoves = fromEvent(domItem, 'touchmove').map(touchEventToCoordinate);
+    const touchEnds = fromEvent(window, 'touchend').map(touchEventToCoordinate);*/
+
+    const mouseMove$ = fromEvent<MouseEvent>(document, 'mousemove');
+    const mouseUp$ = fromEvent<MouseEvent>(document, 'mouseup');
+
     merge(
       fromEvent(this.leftPointer.nativeElement, 'mousedown')
         .pipe(
           switchMap((event) => {
             event.stopImmediatePropagation();
-            return fromEvent<MouseEvent>(document, 'mousemove')
+
+            return mouseMove$
               .pipe(
-                takeUntil(fromEvent(document, 'mouseup'))
+                takeUntil(mouseUp$)
               );
           }),
           tap(({clientX}) => {
@@ -124,9 +146,9 @@ export class RangeComponent implements OnInit, AfterViewInit {
         .pipe(
           switchMap((event) => {
             event.stopImmediatePropagation();
-            return fromEvent<MouseEvent>(document, 'mousemove')
+            return mouseMove$
               .pipe(
-                takeUntil(fromEvent(document, 'mouseup'))
+                takeUntil(mouseUp$)
               );
           }),
           tap(({clientX}) => {
@@ -140,12 +162,12 @@ export class RangeComponent implements OnInit, AfterViewInit {
         .pipe(
           switchMap((mouseDownEvent: MouseEvent) => {
             console.log('### mouseDownEvent', mouseDownEvent);
-            return fromEvent<MouseEvent>(document, 'mousemove')
+            return mouseMove$
               .pipe(
                 map(({clientX: mousemoveClientX}) => mousemoveClientX),
                 startWith(mouseDownEvent.clientX),
                 pairwise(),
-                takeUntil(fromEvent(document, 'mouseup'))
+                takeUntil(mouseUp$)
               );
           }),
           tap(([initialClientX, mousemoveClientX]) => {
