@@ -1,0 +1,27 @@
+@import "../assets/styles/variables";
+
+.app-title {
+  margin-top: 0;
+  padding-top: 20px;
+  font-family: sans-serif;
+
+  color: $darkColor;
+
+  :host-context(.night-mode) & {
+    color: $lightColor;
+  }
+}
+
+.color-mode-btn {
+  display: block;
+  text-align: center;
+  font-family: sans-serif;
+  color: #0099de;
+
+  margin-bottom: 20px;
+
+  &:hover {
+    cursor: pointer;
+    opacity: 0.8;
+  }
+}

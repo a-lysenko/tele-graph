@@ -1,10 +1,17 @@
-<h1>
+<h1 class="app-title">
   Welcome to {{ title }}!
 </h1>
 
-<!--<tg-data-graph-->
-  <!--*ngFor="let dataItem of dataSrc; trackBy: trackByFn"-->
-  <!--[data]="dataItem"></tg-data-graph>-->
-
 <tg-data-graph
-  [data]="dataSrc[0]"></tg-data-graph>
+*ngFor="let dataItem of dataSrc; trackBy: trackByFn"
+[graphTitle]="'Followers'"
+[data]="dataItem"></tg-data-graph>
+
+<!--<tg-data-graph-->
+  <!--[graphTitle]="'Followers'"-->
+  <!--[data]="dataSrc[2]"></tg-data-graph>-->
+
+<div class="color-mode-btn"
+     (click)="toggleMode()">
+  Switch To {{mode === colorModes.Night ? 'Day' : 'Night'}} Mode
+</div>

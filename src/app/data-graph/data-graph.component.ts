@@ -12,6 +12,7 @@ import {GraphService} from '../services/graph.service';
 })
 export class DataGraphComponent implements OnInit {
 
+  @Input() graphTitle = '';
   @Input() data: DataItem = null;
   graphData: GraphData;
   linesActivity: { [key in DataRef]: boolean } = {};

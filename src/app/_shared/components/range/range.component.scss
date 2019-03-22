@@ -1,6 +1,9 @@
 $pointer-width: 5px;
 $infinite-length: 10000px;
 
+$rangeContainerBorderWidth: 1px;
+$greyAlphaColor: rgba(169, 169, 169, 0.5); // darkgrey
+
 .range {
   &__container {
     display: block;
@@ -9,14 +12,17 @@ $infinite-length: 10000px;
     position: relative;
     overflow: hidden;
 
-    border: 1px solid rosybrown;
+    //border: 1px solid rosybrown;
   }
 
   &__pointer-container {
     position: absolute;
     left: auto;
     right: auto;
+    box-sizing: border-box;
     height: 100%;
+    border-top: $rangeContainerBorderWidth solid $greyAlphaColor;
+    border-bottom: $rangeContainerBorderWidth solid $greyAlphaColor;
     display: flex;
     justify-content: space-between;
     background-color: transparent;
@@ -27,11 +33,12 @@ $infinite-length: 10000px;
   &__pointer {
     display: block;
     width: $pointer-width;
-    height: 100%;
+    margin-top: -$rangeContainerBorderWidth;
+    height: calc(100% + 2 * #{$rangeContainerBorderWidth});
     cursor: e-resize;
     touch-action: manipulation;
 
-    background-color: darkgrey;
+    background-color: $greyAlphaColor;
 
     &_left {
       &:before {
@@ -40,10 +47,10 @@ $infinite-length: 10000px;
         position: absolute;
         right: 100%;
         width: $infinite-length;
-        height: 100%;
+        height: calc(100% + 2 * #{$rangeContainerBorderWidth});
         pointer-events: none;
 
-        background-color: rgba(darkgrey, 0.5);
+        background-color: rgba(0, 0, 0, 0.1);
       }
     }
 
@@ -56,10 +63,10 @@ $infinite-length: 10000px;
         position: absolute;
         left: 100%;
         width: $infinite-length;
-        height: 100%;
+        height: calc(100% + 2 * #{$rangeContainerBorderWidth});
         pointer-events: none;
 
-        background-color: rgba(darkgrey, 0.5);
+        background-color: rgba(0, 0, 0, 0.1);
       }
     }
   }

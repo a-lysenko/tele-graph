@@ -1,3 +1,5 @@
+@import "~src/assets/styles/variables";
+
 .tg-label {
   display: inline-flex;
   border: 1px solid grey;
@@ -34,4 +36,11 @@ input[type=checkbox]:not(:checked) + .tg-view-checkbox {
   font-size: 14px;
   line-height: 15px;
   user-select: none;
+  font-family: sans-serif;
+
+  color: $darkColor;
+
+  :host-context(.night-mode) & {
+    color: $lightColor;
+  }
 }

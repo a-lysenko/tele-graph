@@ -1,4 +1,8 @@
 <section>
+  <h2 *ngIf="graphTitle" class="graph-title">
+    {{ graphTitle }}
+  </h2>
+
   <section class="app-section data-graph-container">
     <svg [tgLineGraph]="graphData"></svg>
   </section>

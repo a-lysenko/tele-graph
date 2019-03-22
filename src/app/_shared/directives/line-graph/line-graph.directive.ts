@@ -111,12 +111,9 @@ class SpareLines {
         acc += digitNumber;
       }
 
-      return acc
-        + (
-          (acc < bottomLimit)
-            ? calculate(topLimit, bottomLimit, digitNumber / 10, acc)
-            : 0
-        );
+      return (acc < bottomLimit)
+        ? calculate(topLimit, bottomLimit, digitNumber / 10, acc)
+        : acc;
     }
   }
 
