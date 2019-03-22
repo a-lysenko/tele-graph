@@ -29,6 +29,10 @@
 
 input[type=checkbox]:not(:checked) + .tg-view-checkbox {
   background-color: transparent !important;
+
+  path {
+    stroke: transparent;
+  }
 }
 
 .tg-text {
