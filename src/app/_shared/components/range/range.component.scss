@@ -39,8 +39,10 @@ $greyAlphaColor: rgba(169, 169, 169, 0.5); // darkgrey
     touch-action: manipulation;
 
     background-color: $greyAlphaColor;
+    background-clip: content-box;
 
     &_left {
+      border-right: 10px solid transparent;
       &:before {
         content: '';
         display: block;
@@ -55,7 +57,7 @@ $greyAlphaColor: rgba(169, 169, 169, 0.5); // darkgrey
     }
 
     &_right {
-      left: 250px;
+      border-left: 10px solid transparent;
 
       &:after {
         content: '';
