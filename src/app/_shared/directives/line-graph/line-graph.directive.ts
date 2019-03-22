@@ -246,8 +246,6 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
 
           if (activeLines.length) {
             const animateAction = this.getAnimateAction(svgElem, endViewPort);
-
-            // console.log('########### START, range', range);
             requestAnimationFrame(animateAction);
           }
         }
@@ -374,7 +372,6 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
         if (
           time > (timeStart + durationMs)
         ) {
-          // console.log('####### STOP');
           ctx.initViewPort = {...currViewPort};
           return;
         }

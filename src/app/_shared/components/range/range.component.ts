@@ -76,13 +76,6 @@ export class RangeComponent implements OnInit, AfterViewInit {
             minValue: this.minValue,
             maxValue: this.maxValue
           }),
-          /*pairwise(),
-          tap(([from, to]) => {
-            console.log('from', from, 'to', to);
-          }),
-          map(([, to]) => {
-            return {range: to};
-          })*/
           map((to) => {
             return {range: to};
           })
@@ -98,7 +91,6 @@ export class RangeComponent implements OnInit, AfterViewInit {
     const availableContainerWidth = containerRect.width - rightPointerRect.width;
 
     this.cRef.detach();
-    console.log('this.minValue', this.minValue, 'this.maxValue', this.maxValue);
     this.calcPointerPositions(availableContainerWidth);
     this.cRef.detectChanges();
     this.cRef.reattach();
