@@ -18,7 +18,7 @@ interface LineGraphModel extends GraphServiceModel {
 
 class SpareLines {
 
-  private readonly activeClass = 'horiz-line-group__active';
+  readonly activeClass = 'horiz-line-group__active';
   private sets: SVGGElement[] = [];
   private activeSet: SVGGElement;
   private activeSetInd = -1;
@@ -60,7 +60,7 @@ class SpareLines {
     }
   }
 
-  private createSet(hostElem: SVGElement, setBy: number) {
+  public createSet(hostElem: SVGElement, setBy: number) {
     const gSet: SVGGElement = this.renderer.createElement('g', 'svg');
     this.renderer.addClass(gSet, 'horiz-line-group');
 
@@ -271,6 +271,13 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
       'preserveAspectRatio',
       'none'
     );
+
+    if (this.useRange) {
+      const zeroHorizLineSet = this.spareLines.createSet(svgElem, 1);
+      zeroHorizLineSet.children[0]
+        .setAttribute('d', `M 0 ${containerHeight - 1} H ${containerWidth}`);
+      zeroHorizLineSet.classList.add(this.spareLines.activeClass);
+    }
   }
 
   private drawLine(line: [number, number][], node: SVGElement, color: string) {
