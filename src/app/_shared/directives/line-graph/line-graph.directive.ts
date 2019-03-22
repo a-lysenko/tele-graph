@@ -2,7 +2,7 @@ import {AfterViewInit, Directive, ElementRef, Input, OnInit, Renderer2} from '@a
 import {DataRef, GraphData, LinesData, RangeData} from '../../../app.types';
 import {combine} from '../../../_utils/data-transform.util';
 import {GraphService, GraphServiceModel} from '../../../services/graph.service';
-import {filter, scan, skip, take, tap} from 'rxjs/operators';
+import {filter, max, scan, skip, take, tap} from 'rxjs/operators';
 import {animationTimeMs} from '../../../app.constants';
 
 interface ViewPort {
@@ -14,6 +14,112 @@ interface ViewPort {
 
 interface LineGraphModel extends GraphServiceModel {
   activeLinesChanged?: boolean;
+}
+
+class SpareLines {
+
+  private readonly activeClass = 'horiz-line-group__active';
+  private sets: SVGGElement[] = [];
+  private activeSet: SVGGElement;
+  private activeSetInd = -1;
+
+  constructor(
+    private hostElem: SVGElement,
+    private set: { setsAmount: number, setBy: number },
+    private renderer: Renderer2,
+  ) {
+    for (let setInd = 0; setInd < this.set.setsAmount; setInd++) {
+      this.sets.push(
+        this.createSet(this.hostElem, this.set.setBy)
+      );
+    }
+  }
+
+  public hide() {
+    if (this.activeSet) {
+      this.activeSet.classList.remove(this.activeClass);
+    }
+  }
+
+  public toggle(viewHeight: number, viewShift: number, width: number) {
+    if (this.activeSet) {
+      this.activeSet.classList.remove(this.activeClass);
+    }
+
+    this.activeSetInd = (this.activeSetInd + 1) % this.sets.length;
+    this.activeSet = this.sets[this.activeSetInd];
+
+    const linesYs = this.getLinesY(viewHeight, viewShift, this.set.setBy);
+    const lines = this.activeSet.children;
+    linesYs.forEach((yVal, index) => {
+      lines[index].setAttribute('d', `M 0 ${yVal} H ${width}`);
+    });
+
+    if (linesYs.length) {
+      this.activeSet.classList.add(this.activeClass);
+    }
+  }
+
+  private createSet(hostElem: SVGElement, setBy: number) {
+    const gSet: SVGGElement = this.renderer.createElement('g', 'svg');
+    this.renderer.addClass(gSet, 'horiz-line-group');
+
+    for (let i = 0; i < setBy; i++) {
+      const path: SVGPathElement = this.renderer.createElement('path', 'svg');
+      this.renderer.setAttribute(path, 'd', '');
+      // this.renderer.setAttribute(path, 'stroke', color);
+      this.renderer.setAttribute(path, 'stroke-width', '0.7');
+      this.renderer.setAttribute(path, 'vector-effect', 'non-scaling-stroke');
+      this.renderer.setAttribute(path, 'fill', 'none');
+
+      this.renderer.appendChild(gSet, path);
+      this.renderer.appendChild(hostElem, gSet);
+    }
+
+    return gSet;
+  }
+
+  private getLinesY(viewValue: number, viewShift: number, setBy: number): number[] {
+    const limitDiffRatio = 1.2;
+    const getDigitNumber = (val: number) => {
+      let valInt = parseInt('' + val, 10);
+      let result = 1;
+      while (valInt > 10) {
+        result = result * 10;
+        valInt = valInt / 10;
+      }
+
+      return result;
+    };
+
+    const tmpDigitNumber = getDigitNumber(viewValue);
+    const maxY = calculate(viewValue, viewValue / limitDiffRatio, tmpDigitNumber);
+    const yStep = maxY / 5;
+
+    return (new Array(5))
+      .fill(null)
+      .map((_, ind) => {
+        return yStep * (ind + 1);
+      })
+      .map((yVal) => {
+        return viewShift + viewValue - yVal;
+      });
+
+    function calculate(topLimit: number, bottomLimit: number, digitNumber: number, acc = 0) {
+
+      while ((acc + digitNumber) < topLimit) {
+        acc += digitNumber;
+      }
+
+      return acc
+        + (
+          (acc < bottomLimit)
+            ? calculate(topLimit, bottomLimit, digitNumber / 10, acc)
+            : 0
+        );
+    }
+  }
+
 }
 
 @Directive({
@@ -28,6 +134,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     minValue: 0, maxValue: 100
   };
   private initViewPort: ViewPort = null;
+  private spareLines: SpareLines;
 
   constructor(
     private elem: ElementRef<SVGElement>,
@@ -49,6 +156,13 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     const svgElem = this.elem.nativeElement;
+    if (this.useRange) {
+      this.spareLines = new SpareLines(
+        svgElem,
+        {setsAmount: 2, setBy: 5},
+        this.renderer);
+    }
+
     const containerRect = svgElem.parentElement.getBoundingClientRect();
 
     const containerHeight = containerRect.height;
@@ -66,6 +180,10 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
       stepX,
       scaleY
     );
+
+    if (this.useRange) {
+      this.spareLines.toggle(this.initViewPort.height, this.initViewPort.y, containerWidth);
+    }
 
     this.setViewBox(svgElem, this.initViewPort);
 
@@ -124,6 +242,10 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
             scaleY,
             activeLines
           );
+
+          if (this.useRange) {
+            this.spareLines.toggle(endViewPort.height, endViewPort.y, containerWidth);
+          }
 
           if (activeLines.length) {
             const animateAction = this.getAnimateAction(svgElem, endViewPort);

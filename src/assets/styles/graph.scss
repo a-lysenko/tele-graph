@@ -10,3 +10,17 @@
     opacity: 1;
   }
 }
+
+.horiz-line-group {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+
+  &#{&}__active {
+    opacity: 1;
+  }
+
+  path {
+    // grey
+    stroke: rgba(128, 128, 128, 0.5);
+  }
+}
