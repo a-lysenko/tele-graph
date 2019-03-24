@@ -305,7 +305,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     const topOffsetPx = this.useRange ? 40 : 0;
-    const bottomOffsetPx = this.useRange ? 15 : 0;
+    const bottomOffsetPx = this.useRange ? 20 : 0;
     const parentSvgElem = this.elem.nativeElement;
     const svgElem = this.addSVGElem(parentSvgElem);
 
@@ -337,7 +337,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
 
       this.spareDates = new SpareDates(
         parentSvgElem,
-        parentSvgHeight,
+        parentSvgHeight - 5,
         parentSvgWidth,
         {setsAmount: 2, setBy: 7},
         this.renderer
