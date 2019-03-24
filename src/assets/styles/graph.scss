@@ -46,3 +46,27 @@ body {
     stroke: rgba(128, 128, 128, 0.5);
   }
 }
+
+.date-group {
+  opacity: 0;
+  transition: opacity 0.7s ease-in-out;
+
+  &#{&}__active {
+    opacity: 1;
+  }
+
+  text {
+    font-size: 12px;
+    font-family: sans-serif;
+    stroke: none;
+    // grey
+    fill: rgba(128, 128, 128, 0.6);
+    transition: opacity 0.7s ease-in-out;
+
+    opacity: 0;
+  }
+
+  .date-text__active {
+    opacity: 1;
+  }
+}

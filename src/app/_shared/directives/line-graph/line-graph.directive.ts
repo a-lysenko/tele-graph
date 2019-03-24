@@ -40,7 +40,7 @@ class SpareLines {
     }
   }
 
-  public toggleSet(
+  toggleSet(
     maxDataValue: number,
     viewHeight: number,
     viewShift: number,
@@ -75,7 +75,7 @@ class SpareLines {
     this.activeSet.classList.add(this.activeClass);
   }
 
-  public createSet(hostElem: SVGElement, setBy: number, defaultText = '') {
+  createSet(hostElem: SVGElement, setBy: number, defaultText = '') {
     const gSet: SVGGElement = this.renderer.createElement('g', 'svg');
     this.renderer.addClass(gSet, 'horiz-line-group');
 
@@ -139,6 +139,137 @@ class SpareLines {
 
 }
 
+interface SpareDateSet {
+  group: SVGGElement;
+  first: SVGTextElement;
+  last: SVGTextElement;
+  medium: SVGTextElement[];
+  mediumActive: SVGTextElement[];
+}
+
+class SpareDates {
+
+  readonly activeClass = 'date-group__active';
+  readonly activeTextClass = 'date-text__active';
+  private sets: SpareDateSet[] = [];
+  private activeSet: SpareDateSet;
+  private activeSetInd = -1;
+  private prevMinMaxDateHash: string;
+
+  constructor(
+    private hostElem: SVGElement,
+    private viewShift: number,
+    private containerWidth: number,
+    private set: { setsAmount: number, setBy: number },
+    private renderer: Renderer2,
+  ) {
+    for (let setInd = 0; setInd < this.set.setsAmount; setInd++) {
+      this.sets.push(
+        this.createSet(this.hostElem, this.set.setBy)
+      );
+    }
+  }
+
+  toggleDateSet(textList: number[], maxDotsToShow = this.set.setBy) {
+    const minMaxDateHash = textList.slice(0, 1)[0] + '#' + textList.slice(-1)[0];
+    if (this.prevMinMaxDateHash === minMaxDateHash) {
+      return;
+    }
+
+    this.prevMinMaxDateHash = minMaxDateHash;
+    if (this.activeSet) {
+      this.activeSet.group.classList.remove(this.activeClass);
+    }
+
+    this.activeSetInd = (this.activeSetInd + 1) % this.sets.length;
+    this.activeSet = this.sets[this.activeSetInd];
+
+    this.activeSet.medium.forEach((mediumActiveText) => {
+      mediumActiveText.classList.remove(this.activeTextClass);
+    });
+
+    const msxGroupsToSplitTo = maxDotsToShow - 1;
+    const groupsToSplitInto = this.countGroupsToShow(textList.length, msxGroupsToSplitTo);
+    const amountToSkip = (textList.length - 2 - (groupsToSplitInto - 1)) / groupsToSplitInto;
+
+    const countMediumActive = groupsToSplitInto - 1;
+    this.activeSet.mediumActive = this.activeSet.medium.slice(0, countMediumActive);
+
+    const stepX = (countMediumActive) ? this.containerWidth / groupsToSplitInto : 0;
+    this.activeSet.first.textContent = '' + textList[0];
+    this.activeSet.last.textContent = '' + textList[textList.length - 1];
+    this.activeSet.mediumActive.forEach((mediumActiveText, mediumInd) => {
+      mediumActiveText.textContent = '' + textList[1 + amountToSkip * (mediumInd + 1)];
+      mediumActiveText.setAttribute('x', '' + stepX * (mediumInd + 1));
+
+      mediumActiveText.classList.add(this.activeTextClass);
+    });
+
+    this.activeSet.group.classList.add(this.activeClass);
+  }
+
+  createSet(hostElem: SVGElement, setBy: number, textItems: string[] = []): SpareDateSet {
+    const gSet: SVGGElement = this.renderer.createElement('g', 'svg');
+    this.renderer.addClass(gSet, 'date-group');
+
+    const createdSet: SpareDateSet = {
+      group: gSet,
+      first: null,
+      last: null,
+      medium: [],
+      mediumActive: []
+    };
+
+    for (let i = 0; i < setBy; i++) {
+      const text: SVGTextElement = this.renderer.createElement('text', 'svg');
+      this.renderer.setAttribute(text, 'y', '' + this.viewShift);
+      this.renderer.setAttribute(text, 'vector-effect', 'non-scaling-stroke');
+      this.renderer.setAttribute(text, 'stroke', 'none');
+      text.textContent = textItems[i] || '';
+
+      this.renderer.appendChild(gSet, text);
+      this.renderer.appendChild(hostElem, gSet);
+
+      if (i === 0) {
+        this.renderer.setAttribute(text, 'x', '0');
+        this.renderer.setAttribute(text, 'text-anchor', 'start');
+        this.renderer.addClass(text, this.activeTextClass);
+        createdSet.first = text;
+      } else if (i === (setBy - 1)) {
+        this.renderer.setAttribute(text, 'x', '' + this.containerWidth);
+        this.renderer.setAttribute(text, 'text-anchor', 'end');
+        this.renderer.addClass(text, this.activeTextClass);
+        createdSet.last = text;
+      } else {
+        this.renderer.setAttribute(text, 'x', '');
+        this.renderer.setAttribute(text, 'text-anchor', 'middle');
+        createdSet.medium.push(text);
+      }
+    }
+
+    return createdSet;
+  }
+
+  private canDivide(num: number, groupsNum: number) {
+    // 2 - for first/last boundary points
+    // (num - 2 - (divider - 1) ) / divider = k
+    const amountInGroup = (num - 2 - (groupsNum - 1)) / groupsNum;
+    return amountInGroup === Math.round(amountInGroup);
+  }
+
+  private countGroupsToShow(num: number, maxGroups: number) {
+    for (let groupsNum = maxGroups; groupsNum > 0; groupsNum--) {
+      if (this.canDivide(num, groupsNum)) {
+        return groupsNum;
+      }
+    }
+
+    // It may not happen
+    return 0;
+  }
+
+}
+
 @Directive({
   selector: '[tgLineGraph]'
 })
@@ -152,6 +283,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
   };
   private initViewPort: ViewPortData = null;
   private spareLines: SpareLines;
+  private spareDates: SpareDates;
 
   constructor(
     private elem: ElementRef<SVGElement>,
@@ -172,7 +304,8 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const topOffsetPx = this.useRange ? 15 : 0;
+    const topOffsetPx = this.useRange ? 40 : 0;
+    const bottomOffsetPx = this.useRange ? 15 : 0;
     const parentSvgElem = this.elem.nativeElement;
     const svgElem = this.addSVGElem(parentSvgElem);
 
@@ -180,7 +313,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     const parentSvgHeight = parentContainerRect.height;
     const parentSvgWidth = parentContainerRect.width;
 
-    const graphContainerHeight = parentSvgHeight - topOffsetPx;
+    const graphContainerHeight = parentSvgHeight - topOffsetPx - bottomOffsetPx;
 
     this.setupElement(parentSvgElem, parentSvgWidth, parentSvgHeight, false);
     this.setupElement(svgElem,
@@ -197,10 +330,18 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
 
       const zeroHorizLineSet = this.spareLines.createSet(parentSvgElem, 1, '0');
       zeroHorizLineSet.querySelector('text')
-        .setAttribute('y', `${parentSvgHeight - 5}`);
+        .setAttribute('y', `${parentSvgHeight - bottomOffsetPx - 5}`);
       zeroHorizLineSet.querySelector('path')
-        .setAttribute('d', `M 0 ${parentSvgHeight - 1} H ${parentSvgWidth}`);
+        .setAttribute('d', `M 0 ${parentSvgHeight - bottomOffsetPx - 1} H ${parentSvgWidth}`);
       zeroHorizLineSet.classList.add(this.spareLines.activeClass);
+
+      this.spareDates = new SpareDates(
+        parentSvgElem,
+        parentSvgHeight,
+        parentSvgWidth,
+        {setsAmount: 2, setBy: 7},
+        this.renderer
+      );
     }
 
     const stepX = parentSvgWidth / (this.data.x.length - 1);
@@ -211,7 +352,10 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
       this.initRange,
       this.data,
       stepX,
-      scaleY
+      scaleY,
+      null,
+      topOffsetPx,
+      bottomOffsetPx
     );
 
     if (this.useRange) {
@@ -221,6 +365,9 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
         topOffsetPx,
         parentSvgWidth
       );
+
+      const visibleDataX = this.getVisibleDataX(this.data.x, this.initRange);
+      this.spareDates.toggleDateSet(visibleDataX);
     }
 
     this.setViewBox(svgElem, this.initViewPort);
@@ -278,7 +425,9 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
             this.data,
             stepX,
             scaleY,
-            activeLines
+            activeLines,
+            topOffsetPx,
+            bottomOffsetPx
           );
 
           if (this.useRange) {
@@ -287,6 +436,9 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
               graphContainerHeight,
               topOffsetPx,
               parentSvgWidth);
+
+            const visibleDataX = this.getVisibleDataX(this.data.x, range);
+            this.spareDates.toggleDateSet(visibleDataX);
           }
 
           if (activeLines.length) {
@@ -378,7 +530,9 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     data: GraphData,
     stepX: number,
     stepY: number,
-    activeLines: DataRef[] = null
+    activeLines: DataRef[] = null,
+    topOffsetPx = 0,
+    bottomOffsetPx = 0
   ): ViewPortData {
     const minXInd = Math.ceil((data.x.length - 1) * range.minValue / 100);
     const maxXInd = Math.floor((data.x.length - 1) * range.maxValue / 100);
@@ -393,9 +547,15 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
       x: minX,
       y: containerHeight - viewHeight,
       width: maxX - minX,
-      height: viewHeight,
+      height: viewHeight + topOffsetPx + bottomOffsetPx,
       maxLinesVisibleValue
     };
+  }
+
+  private getVisibleDataX(dataX: number[], range: RangeData) {
+    const minXInd = Math.ceil((dataX.length - 1) * range.minValue / 100);
+    const maxXInd = Math.floor((dataX.length - 1) * range.maxValue / 100);
+    return dataX.slice(minXInd, maxXInd + 1);
   }
 
   private getAnimateAction(svgElem: SVGElement, endViewPort: ViewPort) {

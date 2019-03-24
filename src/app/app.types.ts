@@ -31,7 +31,7 @@ export type LinesData = {
 };
 
 export interface FlatColumns {
-  x: number[];
+  x: any[];
   lines: LinesData;
 }
 
