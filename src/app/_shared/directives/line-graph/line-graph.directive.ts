@@ -199,7 +199,7 @@ class SpareDates {
     this.activeSet.first.textContent = '' + textList[0];
     this.activeSet.last.textContent = '' + textList[textList.length - 1];
     this.activeSet.mediumActive.forEach((mediumActiveText, mediumInd) => {
-      mediumActiveText.textContent = '' + textList[1 + amountToSkip * (mediumInd + 1)];
+      mediumActiveText.textContent = '' + textList[1 + mediumInd + amountToSkip * (mediumInd + 1)];
       mediumActiveText.setAttribute('x', '' + stepX * (mediumInd + 1));
 
       mediumActiveText.classList.add(this.activeTextClass);
