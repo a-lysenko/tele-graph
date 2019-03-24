@@ -217,7 +217,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     if (this.useRange) {
       this.spareLines.toggleSet(
         this.initViewPort.maxLinesVisibleValue,
-        parentSvgHeight,
+        graphContainerHeight,
         topOffsetPx,
         parentSvgWidth
       );
@@ -284,7 +284,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
           if (this.useRange) {
             this.spareLines.toggleSet(
               endViewPort.maxLinesVisibleValue,
-              parentSvgHeight,
+              graphContainerHeight,
               topOffsetPx,
               parentSvgWidth);
           }
