@@ -69,7 +69,7 @@ class SpareLines {
       lines[index].setAttribute('d', `M 0 ${lineYVal} H ${width}`);
 
       textItems[index].setAttribute('y', `${lineYVal - 5}`);
-      textItems[index].textContent = '' + valueStep;
+      textItems[index].textContent = '' + parseFloat(valueStep.toFixed(3));
     });
 
     this.activeSet.classList.add(this.activeClass);
