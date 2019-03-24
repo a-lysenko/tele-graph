@@ -2,7 +2,7 @@ import {AfterViewInit, Directive, ElementRef, Input, OnInit, Renderer2} from '@a
 import {DataRef, GraphData, LinesData, RangeData} from '../../../app.types';
 import {combine} from '../../../_utils/data-transform.util';
 import {GraphService, GraphServiceModel} from '../../../services/graph.service';
-import {filter, max, scan, skip, take, tap} from 'rxjs/operators';
+import {filter, scan, skip, take, tap} from 'rxjs/operators';
 import {animationTimeMs} from '../../../app.constants';
 
 interface ViewPort {
@@ -10,6 +10,10 @@ interface ViewPort {
   y: number;
   width: number;
   height: number;
+}
+
+interface ViewPortData extends ViewPort {
+  maxLinesVisibleValue: number;
 }
 
 interface LineGraphModel extends GraphServiceModel {
@@ -22,6 +26,7 @@ class SpareLines {
   private sets: SVGGElement[] = [];
   private activeSet: SVGGElement;
   private activeSetInd = -1;
+  private prevMaxDataValue: number;
 
   constructor(
     private hostElem: SVGElement,
@@ -35,13 +40,18 @@ class SpareLines {
     }
   }
 
-  public hide() {
-    if (this.activeSet) {
-      this.activeSet.classList.remove(this.activeClass);
+  public toggleSet(
+    maxDataValue: number,
+    viewHeight: number,
+    viewShift: number,
+    width: number
+  ) {
+    if (!maxDataValue
+      || this.prevMaxDataValue === maxDataValue) {
+      return;
     }
-  }
 
-  public toggle(viewHeight: number, viewShift: number, width: number) {
+    this.prevMaxDataValue = maxDataValue;
     if (this.activeSet) {
       this.activeSet.classList.remove(this.activeClass);
     }
@@ -49,22 +59,34 @@ class SpareLines {
     this.activeSetInd = (this.activeSetInd + 1) % this.sets.length;
     this.activeSet = this.sets[this.activeSetInd];
 
-    const linesYs = this.getLinesY(viewHeight, viewShift, this.set.setBy);
-    const lines = this.activeSet.children;
-    linesYs.forEach((yVal, index) => {
-      lines[index].setAttribute('d', `M 0 ${yVal} H ${width}`);
+    const viewToDataRatio = viewHeight / maxDataValue;
+    const valueSteps = this.getValueSteps(maxDataValue, this.set.setBy);
+
+    const lines = this.activeSet.querySelectorAll('path');
+    const textItems = this.activeSet.querySelectorAll('text');
+    valueSteps.forEach((valueStep, index) => {
+      const lineYVal = viewHeight + viewShift - valueStep * viewToDataRatio;
+      lines[index].setAttribute('d', `M 0 ${lineYVal} H ${width}`);
+
+      textItems[index].setAttribute('y', `${lineYVal - 5}`);
+      textItems[index].textContent = '' + valueStep;
     });
 
-    if (linesYs.length) {
-      this.activeSet.classList.add(this.activeClass);
-    }
+    this.activeSet.classList.add(this.activeClass);
   }
 
-  public createSet(hostElem: SVGElement, setBy: number) {
+  public createSet(hostElem: SVGElement, setBy: number, defaultText = '') {
     const gSet: SVGGElement = this.renderer.createElement('g', 'svg');
     this.renderer.addClass(gSet, 'horiz-line-group');
 
     for (let i = 0; i < setBy; i++) {
+      const text: SVGTextElement = this.renderer.createElement('text', 'svg');
+      this.renderer.setAttribute(text, 'x', '5');
+      this.renderer.setAttribute(text, 'y', '');
+      this.renderer.setAttribute(text, 'vector-effect', 'non-scaling-stroke');
+      this.renderer.setAttribute(text, 'stroke', 'none');
+      text.textContent = defaultText;
+
       const path: SVGPathElement = this.renderer.createElement('path', 'svg');
       this.renderer.setAttribute(path, 'd', '');
       // this.renderer.setAttribute(path, 'stroke', color);
@@ -72,6 +94,7 @@ class SpareLines {
       this.renderer.setAttribute(path, 'vector-effect', 'non-scaling-stroke');
       this.renderer.setAttribute(path, 'fill', 'none');
 
+      this.renderer.appendChild(gSet, text);
       this.renderer.appendChild(gSet, path);
       this.renderer.appendChild(hostElem, gSet);
     }
@@ -79,7 +102,7 @@ class SpareLines {
     return gSet;
   }
 
-  private getLinesY(viewValue: number, viewShift: number, setBy: number): number[] {
+  private getValueSteps(viewValue: number, setBy: number): number[] {
     const limitDiffRatio = 1.2;
     const getDigitNumber = (val: number) => {
       let valInt = parseInt('' + val, 10);
@@ -94,15 +117,12 @@ class SpareLines {
 
     const tmpDigitNumber = getDigitNumber(viewValue);
     const maxY = calculate(viewValue, viewValue / limitDiffRatio, tmpDigitNumber);
-    const yStep = maxY / 5;
+    const yStep = maxY / setBy;
 
-    return (new Array(5))
+    return (new Array(setBy))
       .fill(null)
       .map((_, ind) => {
         return yStep * (ind + 1);
-      })
-      .map((yVal) => {
-        return viewShift + viewValue - yVal;
       });
 
     function calculate(topLimit: number, bottomLimit: number, digitNumber: number, acc = 0) {
@@ -130,7 +150,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
   private initRange: RangeData = {
     minValue: 0, maxValue: 100
   };
-  private initViewPort: ViewPort = null;
+  private initViewPort: ViewPortData = null;
   private spareLines: SpareLines;
 
   constructor(
@@ -152,26 +172,42 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const svgElem = this.elem.nativeElement;
+    const topOffsetPx = this.useRange ? 15 : 0;
+    const parentSvgElem = this.elem.nativeElement;
+    const svgElem = this.addSVGElem(parentSvgElem);
+
+    const parentContainerRect = parentSvgElem.parentElement.getBoundingClientRect();
+    const parentSvgHeight = parentContainerRect.height;
+    const parentSvgWidth = parentContainerRect.width;
+
+    const graphContainerHeight = parentSvgHeight - topOffsetPx;
+
+    this.setupElement(parentSvgElem, parentSvgWidth, parentSvgHeight, false);
+    this.setupElement(svgElem,
+      parentSvgWidth,
+      graphContainerHeight,
+      true,
+      topOffsetPx);
+
     if (this.useRange) {
       this.spareLines = new SpareLines(
-        svgElem,
+        parentSvgElem,
         {setsAmount: 2, setBy: 5},
         this.renderer);
+
+      const zeroHorizLineSet = this.spareLines.createSet(parentSvgElem, 1, '0');
+      zeroHorizLineSet.querySelector('text')
+        .setAttribute('y', `${parentSvgHeight - 5}`);
+      zeroHorizLineSet.querySelector('path')
+        .setAttribute('d', `M 0 ${parentSvgHeight - 1} H ${parentSvgWidth}`);
+      zeroHorizLineSet.classList.add(this.spareLines.activeClass);
     }
 
-    const containerRect = svgElem.parentElement.getBoundingClientRect();
-
-    const containerHeight = containerRect.height;
-    const containerWidth = containerRect.width;
-
-    this.setupElement(svgElem, containerWidth, containerHeight);
-
-    const stepX = containerWidth / (this.data.x.length - 1);
-    const scaleY = containerHeight / this.getMaxLinesValue(this.data.lines, 0);
+    const stepX = parentSvgWidth / (this.data.x.length - 1);
+    const scaleY = graphContainerHeight / this.getMaxLinesValue(this.data.lines, 0);
 
     this.initViewPort = this.getViewPort(
-      containerHeight,
+      graphContainerHeight,
       this.initRange,
       this.data,
       stepX,
@@ -179,7 +215,12 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     );
 
     if (this.useRange) {
-      this.spareLines.toggle(this.initViewPort.height, this.initViewPort.y, containerWidth);
+      this.spareLines.toggleSet(
+        this.initViewPort.maxLinesVisibleValue,
+        parentSvgHeight,
+        topOffsetPx,
+        parentSvgWidth
+      );
     }
 
     this.setViewBox(svgElem, this.initViewPort);
@@ -190,7 +231,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     const lineGroupsData: {
       [key in DataRef]: SVGGElement
     } = lineRefs.reduce((acc, lineRef) => {
-      const dataY = this.data.lines[lineRef].map((val) => containerHeight - val * scaleY);
+      const dataY = this.data.lines[lineRef].map((val) => graphContainerHeight - val * scaleY);
       const lineData = combine(dataX, dataY);
 
       const lineGContainer = this.drawLine(
@@ -232,7 +273,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
       .subscribe(({range, activeLines, activeLinesChanged}) => {
         if (this.useRange || activeLinesChanged) {
           const endViewPort = this.getViewPort(
-            containerHeight,
+            graphContainerHeight,
             (this.useRange) ? range : this.initRange,
             this.data,
             stepX,
@@ -241,7 +282,11 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
           );
 
           if (this.useRange) {
-            this.spareLines.toggle(endViewPort.height, endViewPort.y, containerWidth);
+            this.spareLines.toggleSet(
+              endViewPort.maxLinesVisibleValue,
+              parentSvgHeight,
+              topOffsetPx,
+              parentSvgWidth);
           }
 
           if (activeLines.length) {
@@ -252,30 +297,41 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
       });
   }
 
-  private setViewBox(svgElem: SVGElement, initViewPort: ViewPort) {
+  private setViewBox(svgElem: SVGElement, viewPort: ViewPort) {
     this.renderer.setAttribute(
       svgElem,
       'viewBox',
-      `${initViewPort.x} ${initViewPort.y} ${initViewPort.width} ${initViewPort.height}`
+      `${viewPort.x} ${viewPort.y} ${viewPort.width} ${viewPort.height}`
     );
   }
 
-  private setupElement(svgElem: SVGElement, containerWidth: number, containerHeight: number) {
+  private setupElement(
+    svgElem: SVGElement,
+    containerWidth: number,
+    containerHeight: number,
+    setPreserveAspectRatio,
+    topOffset = 0
+  ) {
     this.renderer.setStyle(svgElem, 'width', `${containerWidth}px`);
     this.renderer.setStyle(svgElem, 'height', `${containerHeight}px`);
-
-    this.renderer.setAttribute(
-      svgElem,
-      'preserveAspectRatio',
-      'none'
-    );
-
-    if (this.useRange) {
-      const zeroHorizLineSet = this.spareLines.createSet(svgElem, 1);
-      zeroHorizLineSet.children[0]
-        .setAttribute('d', `M 0 ${containerHeight - 1} H ${containerWidth}`);
-      zeroHorizLineSet.classList.add(this.spareLines.activeClass);
+    if (topOffset) {
+      this.renderer.setAttribute(svgElem, 'y', '' + topOffset);
     }
+
+    if (setPreserveAspectRatio) {
+      this.renderer.setAttribute(
+        svgElem,
+        'preserveAspectRatio',
+        'none'
+      );
+    }
+  }
+
+  private addSVGElem(parentElem: HTMLOrSVGElement) {
+    const svgElem: SVGSVGElement = this.renderer.createElement('svg', 'svg');
+    this.renderer.appendChild(parentElem, svgElem);
+
+    return svgElem;
   }
 
   private drawLine(line: [number, number][], node: SVGElement, color: string) {
@@ -323,7 +379,7 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
     stepX: number,
     stepY: number,
     activeLines: DataRef[] = null
-  ): ViewPort {
+  ): ViewPortData {
     const minXInd = Math.ceil((data.x.length - 1) * range.minValue / 100);
     const maxXInd = Math.floor((data.x.length - 1) * range.maxValue / 100);
 
@@ -337,7 +393,8 @@ export class LineGraphDirective implements OnInit, AfterViewInit {
       x: minX,
       y: containerHeight - viewHeight,
       width: maxX - minX,
-      height: viewHeight
+      height: viewHeight,
+      maxLinesVisibleValue
     };
   }
 
