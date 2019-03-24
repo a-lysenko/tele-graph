@@ -2,6 +2,7 @@ import {ChangeDetectionStrategy, Component, Input, OnInit} from '@angular/core';
 import {DataItem, DataRef, GraphData} from '../app.types';
 import {prepareGraphData} from '../_utils/data-transform.util';
 import {GraphService} from '../services/graph.service';
+import {DatePipe} from '@angular/common';
 
 @Component({
   selector: 'tg-data-graph',
@@ -19,12 +20,18 @@ export class DataGraphComponent implements OnInit {
   lineRefs: DataRef[] = [];
 
   constructor(
+    private datePipe: DatePipe,
     private graphService: GraphService
   ) {
   }
 
   ngOnInit() {
     this.graphData = prepareGraphData(this.data);
+    this.graphData = {
+      ...this.graphData,
+      x: this.graphData.x
+        .map((valueMs) => this.datePipe.transform(new Date(valueMs), 'MMM d'))
+    };
     this.lineRefs = Object.keys(this.data.names);
     this.linesActivity = this.lineRefs
       .reduce((acc, lineRef) => {
